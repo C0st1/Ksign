@@ -29,7 +29,6 @@ struct SettingsView: View {
     
     
         private let _githubUrl = "https://github.com/C0st1/Ksign"
-        private let _githubProfileUrl = "https://github.com/C0st1"
         // MARK: Body
     var body: some View {
                 NBNavigationView(.localized("Settings")) {
@@ -101,9 +100,9 @@ extension SettingsView {
         @ViewBuilder
         private func _feedback() -> some View {
                 Section {
-                        Button(.localized("About"), systemImage: "info.circle") {
-                                UIApplication.open(_githubProfileUrl)
-                        }
+                        NavigationLink(destination: AboutNyaView()) {
+                Label(.localized("About"), systemImage: "info.circle")
+            }
                         Button(.localized("GitHub Repository"), systemImage: "safari") {
                                 UIApplication.open(_githubUrl)
                         }
