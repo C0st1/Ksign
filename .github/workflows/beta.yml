@@ -54,6 +54,11 @@ jobs:
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
+          if [ -z "$DISCORD_WEBHOOK" ]; then
+            echo "No webhook set, skipping."
+            exit 0
+          fi
+          
           COMMIT_MSG=$(git log -1 --pretty=%B)
           
           REPO="${{ github.repository }}"
@@ -70,8 +75,8 @@ jobs:
             --arg download_url "$DOWNLOAD_URL" \
             --arg release_url "$RELEASE_URL" \
             '{content: "**New Beta Released!**\n\nChanges: `\($commit_msg)`\n\n[**Download IPA**](\($download_url))\n[View Release](\($release_url))"}' > discord_payload.json
-
           curl -v \
             -H "Content-Type: application/json" \
             -d @discord_payload.json \
             "$DISCORD_WEBHOOK"
+            

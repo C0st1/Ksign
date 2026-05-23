@@ -39,6 +39,8 @@ struct SourceAppsView: View {
     @State var hasLoadedOnce = false
     @State private var _searchText = ""
     var fromAppStore: Bool = false
+    var onRefresh: (() -> Void)? = nil
+    var isRefreshing: Bool = false
     
     private var _navigationTitle: String {
         if fromAppStore {
@@ -72,6 +74,8 @@ struct SourceAppsView: View {
                     searchText: $_searchText,
                     sortOption: $_sortOption,
                     sortAscending: $_sortAscending,
+                    onRefresh: onRefresh,
+                    isRefreshing: isRefreshing,
                     onSelect: {self._selectedRoute = $0}
                 )
                 .ignoresSafeArea()
@@ -87,6 +91,10 @@ struct SourceAppsView: View {
                 else { ProgressView() }
             }
         }
+        // Note: Pull-to-refresh is handled by UIRefreshControl inside
+        // SourceAppsTableRepresentableView. Do NOT add .refreshable here
+        // or SwiftUI will inject a second refresh control, causing a
+        // double-bounce visual glitch.
         .navigationTitle(_navigationTitle)
         .searchable(text: $_searchText, placement: .platform())
         .toolbarTitleMenu {

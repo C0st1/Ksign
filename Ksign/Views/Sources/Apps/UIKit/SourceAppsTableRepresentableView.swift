@@ -14,6 +14,8 @@ struct SourceAppsTableRepresentableView: UIViewRepresentable {
     @Binding var searchText: String
     @Binding var sortOption: SourceAppsView.SortOption
     @Binding var sortAscending: Bool
+    var onRefresh: (() -> Void)? = nil
+    var isRefreshing: Bool = false
     var onSelect: (SourceAppsView.SourceAppRoute) -> Void
     
     func makeUIView(context: Context) -> UITableView {
@@ -47,6 +49,17 @@ struct SourceAppsTableRepresentableView: UIViewRepresentable {
             }
         }
         
+        if let onRefresh = onRefresh {
+            let refreshControl = UIRefreshControl()
+            refreshControl.addTarget(
+                context.coordinator,
+                action: #selector(Coordinator.handleRefresh),
+                for: .valueChanged
+            )
+            tableView.refreshControl = refreshControl
+            context.coordinator.refreshControl = refreshControl
+        }
+        
         tableView.alpha = 0
         
         UIView.transition(with: tableView,  duration: 0.5, options: [.transitionCrossDissolve], animations: {
@@ -72,6 +85,11 @@ struct SourceAppsTableRepresentableView: UIViewRepresentable {
         if sourcesChanged || searchChanged || sortOptionChanged || sortDirectionChanged {
             context.coordinator.invalidateCache()
         }
+        
+        // Stop refresh control when not refreshing
+        if !isRefreshing {
+            context.coordinator.endRefreshing()
+        }
     }
     
     func makeCoordinator() -> Coordinator {
@@ -80,6 +98,7 @@ struct SourceAppsTableRepresentableView: UIViewRepresentable {
             searchText: searchText,
             sortOption: sortOption,
             sortAscending: sortAscending,
+            onRefresh: onRefresh,
             onSelect: onSelect
         )
     }
@@ -91,6 +110,8 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
     var searchText: String
     var sortOption: SourceAppsView.SortOption
     var sortAscending: Bool
+    var onRefresh: (() -> Void)?
+    weak var refreshControl: UIRefreshControl?
     let onSelect: (SourceAppsView.SourceAppRoute) -> Void
     
     private var _groupedAppsByNameFirstLetter: [String: [(source: ASRepository, app: ASRepository.App)]] = [:]
@@ -117,12 +138,14 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
         searchText: String,
         sortOption: SourceAppsView.SortOption,
         sortAscending: Bool,
+        onRefresh: (() -> Void)? = nil,
         onSelect: @escaping (SourceAppsView.SourceAppRoute) -> Void
     ) {
         self.sources = sources
         self.searchText = searchText
         self.sortOption = sortOption
         self.sortAscending = sortAscending
+        self.onRefresh = onRefresh
         self.onSelect = onSelect
         super.init()
         
@@ -192,9 +215,21 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
     func invalidateCache() {
         _cachedSortedApps = _calculateSortedApps()
         if let tableView = uiTableView {
-            UIView.transition(with: tableView, duration: 0.3, options: [.transitionCrossDissolve], animations: {
+            // When the refresh control is spinning, skip the cross-dissolve
+            // animation — it fights with UIRefreshControl and causes a
+            // visual "bounce".  Just reload data immediately instead.
+            if refreshControl?.isRefreshing == true {
+                let contentOffset = tableView.contentOffset
                 tableView.reloadData()
-            })
+                tableView.contentOffset = contentOffset
+            } else {
+                let contentOffset = tableView.contentOffset
+                UIView.transition(with: tableView, duration: 0.3, options: [.transitionCrossDissolve], animations: {
+                    tableView.reloadData()
+                }, completion: { _ in
+                    tableView.contentOffset = contentOffset
+                })
+            }
         }
     }
     
@@ -309,6 +344,22 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
             
             return UIMenu(children: [downloadsMenu, versionsMenu])
         }
+    }
+    
+    // MARK: - Pull to Refresh
+    
+    @objc func handleRefresh() {
+        onRefresh?()
+    }
+    
+    func endRefreshing() {
+        DispatchQueue.main.async { [weak self] in
+            self?.refreshControl?.endRefreshing()
+        }
+    }
+    
+    deinit {
+        refreshControl?.endRefreshing()
     }
     
     // MARK: Actions

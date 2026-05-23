@@ -10,20 +10,34 @@ import CoreData
 import AltSourceKit
 
 struct AppstoreView: View {
-	@StateObject private var _viewModel = SourcesViewModel.shared
-	
-	@FetchRequest(
-		entity: AltSource.entity(),
-		sortDescriptors: [NSSortDescriptor(keyPath: \AltSource.name, ascending: true)],
-		animation: .snappy
-	) private var _sources: FetchedResults<AltSource>
-	
-	var body: some View {
-		NavigationStack {
-            SourceAppsView(fromAppStore: true, object: Array(_sources), viewModel: _viewModel)
-		}
-		.task(id: Array(_sources)) {
-			await _viewModel.fetchSources(_sources)
-		}
-	}
+        @StateObject private var _viewModel = SourcesViewModel.shared
+        
+        @FetchRequest(
+                entity: AltSource.entity(),
+                sortDescriptors: [NSSortDescriptor(keyPath: \AltSource.name, ascending: true)],
+                animation: .snappy
+        ) private var _sources: FetchedResults<AltSource>
+        
+        private var _isRefreshing: Bool {
+                _viewModel.refreshState == .refreshing
+        }
+        
+        var body: some View {
+                NavigationStack {
+                        SourceAppsView(
+                                fromAppStore: true,
+                                onRefresh: {
+                                        Task {
+                                                await _viewModel.fetchSources(_sources, refresh: true)
+                                        }
+                                },
+                                isRefreshing: _isRefreshing,
+                                object: Array(_sources),
+                                viewModel: _viewModel
+                        )
+                }
+                .task(id: Array(_sources)) {
+                        await _viewModel.fetchSources(_sources)
+                }
+        }
 }

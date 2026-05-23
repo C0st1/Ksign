@@ -20,6 +20,9 @@ struct FeatherApp: App {
 	@StateObject var logsManager = LogsManager.shared
 	let storage = Storage.shared
 
+	@AppStorage("Feather.userInterfaceStyle") private var _userInterfaceStyle: Int = UIUserInterfaceStyle.unspecified.rawValue
+	@Environment(\.scenePhase) private var scenePhase
+
 	var body: some Scene {
 		WindowGroup {
 			VStack {
@@ -42,8 +45,23 @@ struct FeatherApp: App {
 				if logsManager.isCapturing { logsManager.startCapture() }
 			}
 		}
+		.onChange(of: scenePhase) { phase in
+			if phase == .active {
+				_applyUserInterfaceStyle()
+			}
+		}
 	}
-	
+
+	private func _applyUserInterfaceStyle() {
+		guard let style = UIUserInterfaceStyle(rawValue: _userInterfaceStyle) else { return }
+		DispatchQueue.main.async {
+			UIApplication.shared.connectedScenes
+				.compactMap { $0 as? UIWindowScene }
+				.flatMap { $0.windows }
+				.forEach { $0.overrideUserInterfaceStyle = style }
+		}
+	}
+
 	private func _handleURL(_ url: URL) {
 		if url.scheme == "ksign" {
 			if let fullPath = url.validatedScheme(after: "/source/") {
@@ -75,7 +93,6 @@ struct FeatherApp: App {
 	}
 	
 }
-
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(
         _ application: UIApplication,
