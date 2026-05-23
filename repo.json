@@ -23,7 +23,7 @@
                     "version": "1.5.1",
                     "buildVersion": "1",
                     "date": "2025-12-18T01:41:00+07:00",
-                    "localizedDescription": "This version introduces:\n\n- Update checker with badge notifications\n- Pull-to-refresh in Library\n- Dark theme persistence fix\n- Update All button for bulk updates\n- Smart update deduplication\n- Stale update cleanup on app deletion\n- Patch notes viewer",
+                    "localizedDescription": "This version introduces:\n\n- Update checker with badge notifications and background refresh\n- Pull-to-refresh in Library view\n- Dark theme persistence fix on app restart\n- Update All button for bulk app updates\n- Smart update deduplication across sources\n- Stale update cleanup when deleting apps\n- Patch notes viewer on About page\n- Rebranded to C0st1 with custom bundle ID (com.c0st1.ksign)\n- Removed donations, Telegram, and Discord from settings\n- Removed developer repo from default sources\n- GitHub Repository and About (GitHub profile) links in settings",
                     "minOSVersion": "16.0"
                 },
                 {

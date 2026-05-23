@@ -74,10 +74,10 @@ struct AboutNyaView: View {
                 }
                 .onAppear {
                         // Show patch notes when navigating to this view if they haven't been shown before
-                        if !UserDefaults.standard.bool(forKey: "patchNotesShown") {
+                        if !UserDefaults.standard.bool(forKey: "patchNotesShown_v2") {
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                                         _showPatchNotes()
-                                        UserDefaults.standard.set(true, forKey: "patchNotesShown")
+                                        UserDefaults.standard.set(true, forKey: "patchNotesShown_v2")
                                 }
                         }
                 }
@@ -86,7 +86,7 @@ struct AboutNyaView: View {
         private func _showPatchNotes() {
                 UIAlertController.showAlertWithOk(
             title: .localized("From C0st1, Version \(Bundle.main.version)"),
-            message: .localized("This version introduces:\n\n- Update checker with badge notifications\n- Pull-to-refresh in Library\n- Dark theme persistence fix\n- Update All button for bulk updates\n- Smart update deduplication\n- Stale update cleanup on app deletion\n- Patch notes viewer"),
+            message: .localized("This version introduces:\n\n- Update checker with badge notifications and background refresh\n- Pull-to-refresh in Library view\n- Dark theme persistence fix on app restart\n- Update All button for bulk app updates\n- Smart update deduplication across sources\n- Stale update cleanup when deleting apps\n- Patch notes viewer on About page\n- Rebranded to C0st1 with custom bundle ID (com.c0st1.ksign)\n- Removed donations, Telegram, and Discord from settings\n- Removed developer repo from default sources\n- GitHub Repository and About (GitHub profile) links in settings"),
                         isCancel: true,
                         thankYou: true
                 )
