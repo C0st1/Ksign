@@ -7,95 +7,79 @@
 
 import SwiftUI
 import NimbleViews
-import NimbleJSON
 
 // MARK: - View
 struct AboutView: View {
-	typealias CreditsDataHandler = Result<[CreditsModel], Error>
-	private let _dataService = NBFetchService()
-	
-	@State private var _credits: [CreditsModel] = []
-	@State var isLoading = true
-	
-	private let _creditsUrl = "https://raw.githubusercontent.com/khcrysalis/project-credits/refs/heads/main/feather/creditsv2.json"
-	
-	// MARK: Body
-	var body: some View {
-		NBList(.localized("About")) {
-           
-			
-			NBSection(.localized("Credits")) {
-				if !_credits.isEmpty {
-					ForEach(_credits, id: \.self) { credit in
-						_credit(name: credit.name, desc: credit.desc, github: credit.github)
-					}
-					.transition(.slide)
-				}
-			}
-			
-		}
-		.animation(.default, value: isLoading)
-		.task {
-			await _fetchAllData()
-		}
-	}
-	
-	private func _fetchAllData() async {
-		await withTaskGroup(of: (String, CreditsDataHandler).self) { group in
-			group.addTask { return await _fetchCredits(self._creditsUrl, using: _dataService) }
-			
-			for await (type, result) in group {
-				await MainActor.run {
-					switch result {
-					case .success(let data):
-						if type == "credits" {
-							self._credits = data
-						}
-					case .failure(_): break
-					}
-				}
-			}
-		}
-		
-		await MainActor.run {
-			isLoading = false
-		}
-	}
-	
-	private func _fetchCredits(_ urlString: String, using service: NBFetchService) async -> (String, CreditsDataHandler) {
-		let type = urlString == _creditsUrl 
-		? "credits"
-		: "donators"
-		
-		return await withCheckedContinuation { continuation in
-			service.fetch(from: urlString) { (result: CreditsDataHandler) in
-				continuation.resume(returning: (type, result))
-			}
-		}
-	}
+        
+        private let _credits: [CreditsModel] = [
+                CreditsModel(name: "khcrysalis", desc: "Developer", github: "khcrysalis"),
+                CreditsModel(name: "samara", desc: "Contributor", github: "samara"),
+                CreditsModel(name: "Lakr Aream", desc: "Axum Core", github: "Lakr233"),
+                CreditsModel(name: "SideStore", desc: "AltSourceKit", github: "SideStore"),
+                CreditsModel(name: "pmtao", desc: "Contributor", github: "pmtao"),
+                CreditsModel(name: "owo-shiro", desc: "Contributor", github: "owo-shiro"),
+        ]
+        
+        // MARK: Body
+        var body: some View {
+                NBList(.localized("About Feather")) {
+                        
+                        Section {
+                                VStack {
+                                        Text("Feather")
+                                                .font(.largeTitle)
+                                                .bold()
+                                                .foregroundStyle(.accent)
+                                        
+                                        Text("An open-source iOS sideloading app")
+                                                .font(.footnote)
+                                                .foregroundStyle(.secondary)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
+                        }
+                        
+                        NBSection(.localized("Credits")) {
+                                ForEach(_credits, id: \.self) { credit in
+                                        _credit(name: credit.name, desc: credit.desc, github: credit.github)
+                                }
+                        }
+                        
+                        NBSection("Repository") {
+                                Button(.localized("Feather on GitHub"), systemImage: "safari") {
+                                        if let url = URL(string: "https://github.com/khcrysalis/Feather") {
+                                                UIApplication.shared.open(url)
+                                        }
+                                }
+                        } footer: {
+                                Text("Feather is licensed under GPL-3.0")
+                        }
+                        
+                }
+        }
 }
 
 // MARK: - Extension: view
 extension AboutView {
-	@ViewBuilder
-	private func _credit(
-		name: String?,
-		desc: String?,
-		github: String
-	) -> some View {
-		FRIconCellView(
-			title: name ?? github,
-			subtitle: desc ?? "",
-			iconUrl: URL(string: "https://github.com/\(github).png")!,
-			trailing: AnyView(
-				Image(systemName: "arrow.up.right")
-					.foregroundStyle(.secondary)
-			)
-		)
-		.onTapGesture {
-			if let url = URL(string: "https://github.com/\(github)") {
-				UIApplication.shared.open(url)
-			}
-		}
-	}
+        @ViewBuilder
+        private func _credit(
+                name: String?,
+                desc: String?,
+                github: String
+        ) -> some View {
+                FRIconCellView(
+                        title: name ?? github,
+                        subtitle: desc ?? "",
+                        iconUrl: URL(string: "https://github.com/\(github).png")!,
+                        trailing: AnyView(
+                                Image(systemName: "arrow.up.right")
+                                        .foregroundStyle(.secondary)
+                        )
+                )
+                .onTapGesture {
+                        if let url = URL(string: "https://github.com/\(github)") {
+                                UIApplication.shared.open(url)
+                        }
+                }
+        }
 }
