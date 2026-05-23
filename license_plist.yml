@@ -3,7 +3,7 @@ options:
     - LICENSE
   packagePaths:
     - Package.swift
-  prefix: nya.asami.ksign
+  prefix: com.c0st1.ksign
   xcworkspacePath: "*.xcworkspace"
   addVersionNumbers: false
   singlePage: false

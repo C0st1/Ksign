@@ -1,5 +1,5 @@
 //
-//  ContentView.swift
+//  LibraryView.swift
 //  Feather
 //
 //  Created by samara on 10.04.2025.
@@ -12,6 +12,7 @@ import NimbleViews
 // MARK: - View
 struct LibraryView: View {
 	@StateObject var downloadManager = DownloadManager.shared
+	@ObservedObject var updateManager = UpdateManager.shared
 	
 	@State private var _selectedInfoAppPresenting: AnyApp?
 	@State private var _selectedSigningAppPresenting: AnyApp?
@@ -74,6 +75,86 @@ struct LibraryView: View {
 				.padding(.vertical, 8)
 				
 				NBListAdaptable {
+					// Updates Available section
+					if !updateManager.updates.isEmpty {
+						NBSection(
+							.localized("Updates Available"),
+							secondary: updateManager.updateCount.description
+						) {
+							// Update All row
+							if updateManager.updateCount > 1 {
+								HStack {
+									Spacer()
+									Button {
+										_updateAllApps()
+									} label: {
+										HStack(spacing: 6) {
+											Image(systemName: "arrow.triangle.2.circlepath")
+												.font(.subheadline.bold())
+											Text(.localized("Update All"))
+												.font(.subheadline.bold())
+										}
+										.foregroundStyle(.white)
+										.padding(.horizontal, 16)
+										.padding(.vertical, 7)
+										.background(Color.orange)
+										.clipShape(Capsule())
+									}
+									.buttonStyle(.borderless)
+									Spacer()
+								}
+								.padding(.vertical, 4)
+							}
+
+							ForEach(Array(updateManager.updates.values), id: \.id) { update in
+								VStack(alignment: .leading, spacing: 4) {
+									HStack(spacing: 10) {
+										VStack(alignment: .leading, spacing: 2) {
+											Text(update.installedApp.name ?? .localized("Unknown"))
+												.font(.body)
+												.fontWeight(.medium)
+											HStack(spacing: 4) {
+												Text(update.installedVersion)
+													.font(.caption)
+													.foregroundStyle(.secondary)
+												Image(systemName: "arrow.right")
+													.font(.caption2)
+													.foregroundStyle(.secondary)
+												Text(update.availableVersion)
+													.font(.caption)
+													.foregroundStyle(.orange)
+											}
+										}
+										Spacer()
+										Button {
+											if let url = update.sourceApp.currentDownloadUrl {
+												_ = downloadManager.startDownload(from: url, id: update.sourceApp.currentUniqueId, sourceURL: update.sourceURL)
+											}
+										} label: {
+											Text(.localized("Update"))
+												.font(.subheadline.bold())
+												.foregroundStyle(.white)
+												.padding(.horizontal, 16)
+												.padding(.vertical, 4)
+												.background(Color.orange)
+												.clipShape(Capsule())
+										}
+										.buttonStyle(.borderless)
+									}
+
+									// Show changelog / what's new if available
+									if let changelog = update.versionDescription, !changelog.isEmpty {
+										Text(changelog)
+											.font(.caption)
+											.foregroundStyle(.secondary)
+											.lineLimit(3)
+											.padding(.top, 2)
+									}
+								}
+								.padding(.vertical, 4)
+							}
+						}
+					}
 					if _selectedTab == 0 {
 						NBSection(
 							.localized("Downloaded Apps"),
@@ -177,7 +258,7 @@ struct LibraryView: View {
 			.sheet(item: $_selectedInstallAppPresenting) { app in
 				InstallPreviewView(app: app.base, isSharing: app.archive)
 					.presentationDetents([.height(200)])
-					.presentationDragIndicator(.visible)			}
+					.presentationDragIndicator(.visible)					}
 			.fullScreenCover(item: $_selectedSigningAppPresenting) { app in
 				SigningView(app: app.base, signAndInstall: app.signAndInstall)
 					.compatNavigationTransition(id: app.base.uuid ?? "", ns: _namespace)
@@ -239,8 +320,8 @@ struct LibraryView: View {
                     _selectedInstallAppPresenting = AnyApp(base: app)
 				}
 			}
-        }
-        .onChange(of: _isEditMode) { state in
+		}
+		.onChange(of: _isEditMode) { state in
             if !state.isEditing {
                 DispatchQueue.main.asyncAfter(deadline: .now()) {
                     withAnimation{
@@ -249,7 +330,16 @@ struct LibraryView: View {
                 }
             }
         }
-    }
+	}
+	
+	/// Download all available updates at once
+	private func _updateAllApps() {
+		for update in updateManager.updates.values {
+			if let url = update.sourceApp.currentDownloadUrl {
+				_ = downloadManager.startDownload(from: url, id: update.sourceApp.currentUniqueId, sourceURL: update.sourceURL)
+			}
+		}
+	}
 }
 
 extension LibraryView {

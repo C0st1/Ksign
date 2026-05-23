@@ -17,6 +17,10 @@ struct SourceAppsCellView: View {
     
     var source: ASRepository
     var app: ASRepository.App
+    /// Look up the source URL from SourcesViewModel by matching the ASRepository
+    private var _sourceURL: URL? {
+        SourcesViewModel.shared.sources.first { $0.value == source }?.key.sourceURL
+    }
     
     var body: some View {
         VStack {
@@ -37,7 +41,7 @@ struct SourceAppsCellView: View {
                         }
                     }
                 }
-                DownloadButtonView(app: app)
+                DownloadButtonView(app: app, sourceURL: _sourceURL)
             }
             
             if

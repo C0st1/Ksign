@@ -45,6 +45,22 @@ struct AppFeaturesView: View {
             } footer: {
                 Text(.localized("This will save the App Store downloads to the Downloads folder, turning this off will help reduce disk usage."))
             }
+            Section {
+                Toggle(isOn: $_optionsManager.options.checkForUpdates) {
+                    Label(.localized("Check for Updates"), systemImage: "arrow.trianglehead.2.clockwise")
+                }
+                if _optionsManager.options.checkForUpdates {
+                    Toggle(isOn: $_optionsManager.options.notifyOnUpdates) {
+                        Label(.localized("Notify on Updates"), systemImage: "bell.badge")
+                    }
+                    .disabled(!_optionsManager.options.notifications)
+                    Toggle(isOn: $_optionsManager.options.backgroundUpdateCheck) {
+                        Label(.localized("Background Update Check"), systemImage: "arrow.down.circle")
+                    }
+                }
+            } footer: {
+                Text(.localized("Automatically check for app updates when sources are refreshed. Notifications require download notifications to be enabled."))
+            }
         }
         .onChange(of: _optionsManager.options) { _ in
             _optionsManager.saveOptions()

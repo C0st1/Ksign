@@ -48,6 +48,10 @@ final class SourcesViewModel: ObservableObject {
                         isFinished = true
                         Task { @MainActor in
                                 self.refreshState = .success
+                                // Check for updates after sources are fetched
+                                if OptionsManager.shared.options.checkForUpdates {
+                                        UpdateManager.shared.forceCheckForUpdates()
+                                }
                         }
                 }
                 

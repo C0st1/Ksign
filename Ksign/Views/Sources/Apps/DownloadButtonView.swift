@@ -12,14 +12,39 @@ import NimbleViews
 
 struct DownloadButtonView: View {
 	let app: ASRepository.App
+	let sourceURL: URL?
 	@ObservedObject private var downloadManager = DownloadManager.shared
+	@ObservedObject private var updateManager = UpdateManager.shared
 
 	@State private var downloadProgress: Double = 0
 	@State private var cancellable: AnyCancellable?
 
+	private var installState: InstallState {
+		if downloadManager.getDownload(by: app.currentUniqueId) != nil {
+			return .downloading
+		}
+		// Only show "Update" if THIS specific source app version is newer
+		// than the currently installed version. This prevents showing "Update"
+		// on older source entries when multiple versions of the same app exist.
+		if let bundleId = app.id,
+		   let update = updateManager.update(for: bundleId),
+		   let sourceVersion = app.currentVersion,
+		   VersionComparator.isUpdateAvailable(installed: update.installedVersion, source: sourceVersion) {
+			return .update
+		}
+		return .get
+	}
+
+	enum InstallState {
+		case get
+		case update
+		case downloading
+	}
+
 	var body: some View {
 		ZStack {
-			if let currentDownload = downloadManager.getDownload(by: app.currentUniqueId) {
+			switch installState {
+			case .downloading:
 				ZStack {
 					Circle()
 						.trim(from: 0, to: downloadProgress)
@@ -33,15 +58,34 @@ struct DownloadButtonView: View {
 						.font(.footnote).bold()
 				}
 				.onTapGesture {
-					if downloadProgress <= 0.75 {
-						downloadManager.cancelDownload(currentDownload)
+					if let currentDownload = downloadManager.getDownload(by: app.currentUniqueId) {
+						if downloadProgress <= 0.75 {
+							downloadManager.cancelDownload(currentDownload)
+						}
 					}
 				}
 				.compatTransition()
-			} else {
+			case .update:
 				Button {
 					if let url = app.currentDownloadUrl {
-						_ = downloadManager.startDownload(from: url, id: app.currentUniqueId)
+						_ = downloadManager.startDownload(from: url, id: app.currentUniqueId, sourceURL: sourceURL)
+					}
+				} label: {
+					Text(.localized("Update"))
+						.lineLimit(0)
+						.font(.headline.bold())
+						.foregroundStyle(.white)
+						.padding(.horizontal, 24)
+						.padding(.vertical, 6)
+						.background(Color.orange)
+						.clipShape(Capsule())
+				}
+				.buttonStyle(.borderless)
+				.compatTransition()
+			case .get:
+				Button {
+					if let url = app.currentDownloadUrl {
+						_ = downloadManager.startDownload(from: url, id: app.currentUniqueId, sourceURL: sourceURL)
 					}
 				} label: {
 					Text(.localized("Get"))

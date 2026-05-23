@@ -9,89 +9,94 @@ import SwiftUI
 import Nuke
 import OSLog
 import IDeviceSwift
+import BackgroundTasks
 
 @main
 struct FeatherApp: App {
-	@UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-	let heartbeat = HeartbeatManager.shared
-	@StateObject var downloadManager = DownloadManager.shared
-	@StateObject var accentColorManager = AccentColorManager.shared
+        @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+        let heartbeat = HeartbeatManager.shared
+        @StateObject var downloadManager = DownloadManager.shared
+        @StateObject var accentColorManager = AccentColorManager.shared
     @StateObject var extractManager = ExtractManager.shared
-	@StateObject var logsManager = LogsManager.shared
-	let storage = Storage.shared
+        @StateObject var logsManager = LogsManager.shared
+        let storage = Storage.shared
 
-	@AppStorage("Feather.userInterfaceStyle") private var _userInterfaceStyle: Int = UIUserInterfaceStyle.unspecified.rawValue
-	@Environment(\.scenePhase) private var scenePhase
+        @AppStorage("Feather.userInterfaceStyle") private var _userInterfaceStyle: Int = UIUserInterfaceStyle.unspecified.rawValue
+        @Environment(\.scenePhase) private var scenePhase
 
-	var body: some Scene {
-		WindowGroup {
-			VStack {
+        var body: some Scene {
+                WindowGroup {
+                        VStack {
                 ExtractHeaderView(extractManager: extractManager)
                     .transition(.move(edge: .top).combined(with: .opacity))
-				DownloadHeaderView(downloadManager: downloadManager)
-					.transition(.move(edge: .top).combined(with: .opacity))
-				VariedTabbarView()
-					.environment(\.managedObjectContext, storage.context)
-					.onOpenURL(perform: _handleURL)
-					.transition(.move(edge: .top).combined(with: .opacity))
-			}
-			.animation(.smooth, value: downloadManager.manualDownloads.description)
+                                DownloadHeaderView(downloadManager: downloadManager)
+                                        .transition(.move(edge: .top).combined(with: .opacity))
+                                VariedTabbarView()
+                                        .environment(\.managedObjectContext, storage.context)
+                                        .onOpenURL(perform: _handleURL)
+                                        .transition(.move(edge: .top).combined(with: .opacity))
+                        }
+                        .animation(.smooth, value: downloadManager.manualDownloads.description)
             .animation(.smooth, value: extractManager.extractItems.description)
-			.onReceive(accentColorManager.objectWillChange) { _ in
-				accentColorManager.updateGlobalTintColor()
-			}
-			.onAppear {
-				accentColorManager.updateGlobalTintColor()
-				if logsManager.isCapturing { logsManager.startCapture() }
-			}
-		}
-		.onChange(of: scenePhase) { phase in
-			if phase == .active {
-				_applyUserInterfaceStyle()
-			}
-		}
-	}
+                        .onReceive(accentColorManager.objectWillChange) { _ in
+                                accentColorManager.updateGlobalTintColor()
+                        }
+                        .onAppear {
+                                accentColorManager.updateGlobalTintColor()
+                                _applyUserInterfaceStyle()
+                                if logsManager.isCapturing { logsManager.startCapture() }
+                        }
+                }
+                .onChange(of: scenePhase) { phase in
+                        if phase == .active {
+                                _applyUserInterfaceStyle()
+                                if OptionsManager.shared.options.checkForUpdates {
+                                        UpdateManager.shared.checkForUpdates()
+                                }
+                        }
+                }
+        }
 
-	private func _applyUserInterfaceStyle() {
-		guard let style = UIUserInterfaceStyle(rawValue: _userInterfaceStyle) else { return }
-		DispatchQueue.main.async {
-			UIApplication.shared.connectedScenes
-				.compactMap { $0 as? UIWindowScene }
-				.flatMap { $0.windows }
-				.forEach { $0.overrideUserInterfaceStyle = style }
-		}
-	}
+        private func _applyUserInterfaceStyle() {
+                guard let style = UIUserInterfaceStyle(rawValue: _userInterfaceStyle) else { return }
+                DispatchQueue.main.async {
+                        UIApplication.shared.connectedScenes
+                                .compactMap { $0 as? UIWindowScene }
+                                .flatMap { $0.windows }
+                                .forEach { $0.overrideUserInterfaceStyle = style }
+                }
+        }
 
-	private func _handleURL(_ url: URL) {
-		if url.scheme == "ksign" {
-			if let fullPath = url.validatedScheme(after: "/source/") {
-				FR.handleSource(fullPath) { }
-			}
-			
-			if
-				let fullPath = url.validatedScheme(after: "/install/"),
-				let downloadURL = URL(string: fullPath)
-			{
-				_ = DownloadManager.shared.startDownload(from: downloadURL, id: "FeatherManualDownload_\(UUID().uuidString)")
-			}
-		} else {
-			if url.pathExtension == "ipa" || url.pathExtension == "tipa" {
-				if FileManager.default.isFileFromFileProvider(at: url) {
-					guard url.startAccessingSecurityScopedResource() else { return }
-					FR.handlePackageFile(url) { _ in }
-				} else {
-					FR.handlePackageFile(url) { _ in }
-				}
-				
-				return
-			}
-			
+        private func _handleURL(_ url: URL) {
+                if url.scheme == "ksign" {
+                        if let fullPath = url.validatedScheme(after: "/source/") {
+                                FR.handleSource(fullPath) { }
+                        }
+                        
+                        if
+                                let fullPath = url.validatedScheme(after: "/install/"),
+                                let downloadURL = URL(string: fullPath)
+                        {
+                                _ = DownloadManager.shared.startDownload(from: downloadURL, id: "FeatherManualDownload_\(UUID().uuidString)")
+                        }
+                } else {
+                        if url.pathExtension == "ipa" || url.pathExtension == "tipa" {
+                                if FileManager.default.isFileFromFileProvider(at: url) {
+                                        guard url.startAccessingSecurityScopedResource() else { return }
+                                        FR.handlePackageFile(url) { _ in }
+                                } else {
+                                        FR.handlePackageFile(url) { _ in }
+                                }
+                                
+                                return
+                        }
+                        
             if url.pathExtension == "ksign" {
                 UIAlertController.showAlertWithOk(title: .localized("Error"), message: .localized("Ksign certificate file (.ksign) is now unsupported from v1.5.1, please refer to use .p12 and .mobileprovision instead."))
             }
-		}
-	}
-	
+                }
+        }
+        
 }
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(
@@ -110,6 +115,8 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         
         _copyServerCertificates()
         _addDefaultCertificates()
+        // Register background update check task
+        _registerBackgroundUpdateCheck()
 
 #if SERVER
         // fallback just in case xd
@@ -122,6 +129,48 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         Storage.shared.addBuiltInSources()
     }
     
+    private func _registerBackgroundUpdateCheck() {
+        BGTaskScheduler.shared.register(
+            forTaskWithIdentifier: "com.ksign.updateCheck",
+            using: nil
+        ) { task in
+            self._handleBackgroundUpdateCheck(task as! BGAppRefreshTask)
+        }
+        _scheduleBackgroundUpdateCheck()
+    }
+    
+    private func _handleBackgroundUpdateCheck(_ task: BGAppRefreshTask) {
+        _scheduleBackgroundUpdateCheck()
+
+        task.expirationHandler = {
+            task.setTaskCompleted(success: false)
+        }
+
+        guard OptionsManager.shared.options.checkForUpdates,
+              OptionsManager.shared.options.backgroundUpdateCheck else {
+            task.setTaskCompleted(success: true)
+            return
+        }
+
+        UpdateManager.shared.forceCheckForUpdates {
+            task.setTaskCompleted(success: true)
+        }
+    }
+    
+    private func _scheduleBackgroundUpdateCheck() {
+        guard OptionsManager.shared.options.checkForUpdates,
+              OptionsManager.shared.options.backgroundUpdateCheck else { return }
+        
+        let request = BGAppRefreshTaskRequest(identifier: "com.ksign.updateCheck")
+        request.earliestBeginDate = Date(timeIntervalSinceNow: 4 * 3600)
+        
+        do {
+            try BGTaskScheduler.shared.submit(request)
+        } catch {
+            print("Could not schedule background update check: \(error)")
+        }
+    }
+    
     private func _createPipeline() {
         DataLoader.sharedUrlCache.diskCapacity = 0
         
@@ -131,7 +180,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
                 config.urlCache = nil
                 return DataLoader(configuration: config)
             }()
-            let dataCache = try? DataCache(name: "thewonderofyou.Feather.datacache") // disk cache
+            let dataCache = try? DataCache(name: "com.c0st1.ksign.datacache") // disk cache
             let imageCache = Nuke.ImageCache() // memory cache
             dataCache?.sizeLimit = 500 * 1024 * 1024
             imageCache.costLimit = 100 * 1024 * 1024
