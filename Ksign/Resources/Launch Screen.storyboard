@@ -18,21 +18,59 @@
                         <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="ksign_extension.png" translatesAutoresizingMaskIntoConstraints="NO" id="lQc-Py-TkU" userLabel="ksign_extension">
-                                <rect key="frame" x="119" y="373.66666666666669" width="155" height="105"/>
+                            <!-- Centered logo -->
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="ksign_extension.png" translatesAutoresizingMaskIntoConstraints="NO" id="lQc-Py-TkU" userLabel="ksign_logo">
+                                <rect key="frame" x="126.5" y="338" width="140" height="140"/>
                                 <color key="tintColor" name="AccentColor"/>
                                 <constraints>
-                                    <constraint firstAttribute="height" constant="105" id="YwF-YB-Wa3"/>
-                                    <constraint firstAttribute="width" secondItem="lQc-Py-TkU" secondAttribute="height" multiplier="31:21" id="fy4-xz-HzT"/>
-                                    <constraint firstAttribute="width" constant="155" id="kwv-cb-TEl"/>
+                                    <constraint firstAttribute="width" constant="140" id="kwv-cb-TEl"/>
+                                    <constraint firstAttribute="height" constant="140" id="YwF-YB-Wa3"/>
                                 </constraints>
                             </imageView>
+                            <!-- App title -->
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Ksign" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="tRt-X4-7hG" userLabel="app_title">
+                                <rect key="frame" x="100" y="498" width="193" height="41"/>
+                                <fontDescription key="fontDescription" type="boldSystem" pointSize="34"/>
+                                <color key="textColor" name="AccentColor"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                            <!-- Tagline -->
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Sign. Install. Enjoy." textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="mVq-Bz-sPj" userLabel="tagline">
+                                <rect key="frame" x="126" y="545" width="141" height="18"/>
+                                <fontDescription key="fontDescription" type="system" weight="medium" pointSize="15"/>
+                                <color key="textColor" systemColor="secondaryLabelColor"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                            <!-- Bottom accent line -->
+                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="aB3-Ld-9xF" userLabel="accent_line">
+                                <rect key="frame" x="100" y="787" width="193" height="1"/>
+                                <color key="backgroundColor" name="AccentColor"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="1" id="LhG-2b-pUx"/>
+                                    <constraint firstAttribute="width" constant="193" id="RfK-kA-g3s"/>
+                                </constraints>
+                                <userDefinedRuntimeAttributes>
+                                    <userDefinedRuntimeAttribute type="number" keyPath="layer.cornerRadius">
+                                        <real key="value" value="0.5"/>
+                                    </userDefinedRuntimeAttribute>
+                                </userDefinedRuntimeAttributes>
+                            </view>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="Bcu-3y-fUS"/>
                         <color key="backgroundColor" systemColor="systemBackgroundColor"/>
                         <constraints>
-                            <constraint firstItem="lQc-Py-TkU" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="Um3-kF-JBq"/>
+                            <!-- Logo centering -->
                             <constraint firstItem="lQc-Py-TkU" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="cZT-is-IW4"/>
+                            <constraint firstItem="lQc-Py-TkU" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" constant="-18" id="Um3-kF-JBq"/>
+                            <!-- Title below logo -->
+                            <constraint firstItem="tRt-X4-7hG" firstAttribute="top" secondItem="lQc-Py-TkU" secondAttribute="bottom" constant="20" id="Ttl-cO-nDn"/>
+                            <constraint firstItem="tRt-X4-7hG" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="V3H-Gw-7aK"/>
+                            <!-- Tagline below title -->
+                            <constraint firstItem="mVq-Bz-sPj" firstAttribute="top" secondItem="tRt-X4-7hG" secondAttribute="bottom" constant="6" id="Kxn-mS-qVo"/>
+                            <constraint firstItem="mVq-Bz-sPj" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="PfW-bC-g6M"/>
+                            <!-- Accent line at bottom -->
+                            <constraint firstItem="aB3-Ld-9xF" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="GxA-Yn-h6P"/>
+                            <constraint firstItem="Bcu-3y-fUS" firstAttribute="bottom" secondItem="aB3-Ld-9xF" secondAttribute="bottom" constant="30" id="WqR-Xb-Y3e"/>
                         </constraints>
                     </view>
                 </viewController>
@@ -46,6 +84,9 @@
         <namedColor name="AccentColor">
             <color red="0.32549019607843138" green="0.58039215686274515" blue="0.96862745098039216" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </namedColor>
+        <systemColor name="secondaryLabelColor">
+            <color red="0.23529411764705882" green="0.23529411764705882" blue="0.2627450980392157" alpha="0.59999999999999998" colorSpace="custom" customColorSpace="sRGB"/>
+        </systemColor>
         <systemColor name="systemBackgroundColor">
             <color white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
         </systemColor>

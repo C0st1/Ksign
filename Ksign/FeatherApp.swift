@@ -21,30 +21,42 @@ struct FeatherApp: App {
         @StateObject var logsManager = LogsManager.shared
         let storage = Storage.shared
 
+        /// Controls the animated splash overlay visibility
+        @StateObject private var splashVM = SplashViewModel()
+
         @AppStorage("Feather.userInterfaceStyle") private var _userInterfaceStyle: Int = UIUserInterfaceStyle.unspecified.rawValue
         @Environment(\.scenePhase) private var scenePhase
 
         var body: some Scene {
                 WindowGroup {
-                        VStack {
-                ExtractHeaderView(extractManager: extractManager)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                                DownloadHeaderView(downloadManager: downloadManager)
-                                        .transition(.move(edge: .top).combined(with: .opacity))
-                                VariedTabbarView()
-                                        .environment(\.managedObjectContext, storage.context)
-                                        .onOpenURL(perform: _handleURL)
-                                        .transition(.move(edge: .top).combined(with: .opacity))
-                        }
-                        .animation(.smooth, value: downloadManager.manualDownloads.description)
-            .animation(.smooth, value: extractManager.extractItems.description)
-                        .onReceive(accentColorManager.objectWillChange) { _ in
-                                accentColorManager.updateGlobalTintColor()
-                        }
-                        .onAppear {
-                                accentColorManager.updateGlobalTintColor()
-                                _applyUserInterfaceStyle()
-                                if logsManager.isCapturing { logsManager.startCapture() }
+                        ZStack {
+                                // ── Main app content ─────────────────────────
+                                VStack {
+                    ExtractHeaderView(extractManager: extractManager)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                                        DownloadHeaderView(downloadManager: downloadManager)
+                                                .transition(.move(edge: .top).combined(with: .opacity))
+                                        VariedTabbarView()
+                                                .environment(\.managedObjectContext, storage.context)
+                                                .onOpenURL(perform: _handleURL)
+                                                .transition(.move(edge: .top).combined(with: .opacity))
+                                }
+                                .animation(.smooth, value: downloadManager.manualDownloads.description)
+                .animation(.smooth, value: extractManager.extractItems.description)
+                                .onReceive(accentColorManager.objectWillChange) { _ in
+                                        accentColorManager.updateGlobalTintColor()
+                                }
+                                .onAppear {
+                                        accentColorManager.updateGlobalTintColor()
+                                        _applyUserInterfaceStyle()
+                                        if logsManager.isCapturing { logsManager.startCapture() }
+                                }
+
+                                // ── Splash overlay ───────────────────────────
+                                if splashVM.phase != .dismissed {
+                                        SplashView(vm: splashVM)
+                                                .onAppear { splashVM.start() }
+                                }
                         }
                 }
                 .onChange(of: scenePhase) { phase in
