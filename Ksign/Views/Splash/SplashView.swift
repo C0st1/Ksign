@@ -43,8 +43,9 @@ struct SplashView: View {
 
     @ViewBuilder
     private var backgroundLayer: some View {
-        // Solid adaptive base
-        Color(uiColor: .systemBackground)
+        // Always-black base matches the storyboard launch screen,
+        // eliminating any white flash during the storyboard → SwiftUI transition.
+        Color.black
             .ignoresSafeArea()
 
         // Subtle radial glow behind the logo

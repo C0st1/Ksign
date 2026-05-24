@@ -58,7 +58,7 @@ struct FeatherApp: App {
                                                 .onAppear { splashVM.start() }
                                 }
                         }
-                        .background(Color(uiColor: .systemBackground).ignoresSafeArea())
+                        .background(Color.black.ignoresSafeArea())
                 }
                 .onChange(of: scenePhase) { phase in
                         if phase == .active {
@@ -116,7 +116,12 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
-        
+
+        // Apply the user's appearance preference BEFORE any UI renders.
+        // This prevents the white flash that occurs when the system storyboard
+        // (always black now) hands off to the SwiftUI window.
+        _applyAppearanceEarly()
+
         _createPipeline()
         _createSourcesDirectory()
         if !UserDefaults.standard.bool(forKey: "hasInitializedBuiltInSources") {
@@ -138,6 +143,23 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         return true
     }
     
+    /// Applies the user's preferred appearance (dark/light/system) as early as
+    /// possible in the launch cycle so that the first SwiftUI frame already
+    /// respects the chosen theme — preventing a white flash on dark-mode launch.
+    private func _applyAppearanceEarly() {
+        let raw = UserDefaults.standard.integer(forKey: "Feather.userInterfaceStyle")
+        let style = UIUserInterfaceStyle(rawValue: raw) ?? .unspecified
+        DispatchQueue.main.async {
+            UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .flatMap { $0.windows }
+                .forEach { window in
+                    window.overrideUserInterfaceStyle = style
+                    window.backgroundColor = .black
+                }
+        }
+    }
+
     private func _initializeBuiltInSources() { 
         Storage.shared.addBuiltInSources()
     }
