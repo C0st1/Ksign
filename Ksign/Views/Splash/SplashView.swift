@@ -5,7 +5,8 @@
 //  Reworked animated launch screen with full theme sync.
 //  Reads the user's accent color & appearance preferences directly
 //  from UserDefaults — no dependency on AccentColorManager startup timing.
-//  Fully adaptive: matches the system/app appearance in both light & dark.
+//  Background starts black (matching storyboard) and smoothly blends
+//  to the app's actual theme color while content is already visible.
 //
 
 import SwiftUI
@@ -44,11 +45,19 @@ struct SplashView: View {
 
     @ViewBuilder
     private var backgroundLayer: some View {
-        // Adaptive base: white in light mode, black in dark mode — matches
-        // the storyboard's systemBackgroundColor exactly so there is zero
-        // visible flash during the storyboard → SwiftUI transition.
+        // Base layer: always black — matches the storyboard exactly,
+        // guaranteeing zero flash during the storyboard → SwiftUI handoff.
+        Color.black
+            .ignoresSafeArea()
+
+        // Theme layer: fades in on top, shifting from black to the app's
+        // actual systemBackground (white in light mode, black in dark).
+        // In dark mode this is invisible (black → black).
+        // In light mode it creates a smooth black → white transition
+        // that happens while the logo is already on screen.
         Color(uiColor: .systemBackground)
             .ignoresSafeArea()
+            .opacity(vm.bgBlend)
 
         // Subtle radial glow behind the logo
         RadialGradient(

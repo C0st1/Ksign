@@ -3,6 +3,8 @@
 //  Ksign
 //
 //  Reworked launch screen with full theme sync.
+//  Background smoothly transitions from black (matching the storyboard)
+//  to the app's actual theme color so there's zero flash in both modes.
 //
 
 import SwiftUI
@@ -28,6 +30,12 @@ class SplashViewModel: ObservableObject {
     @Published var subtitleOffset: CGFloat = 8
     @Published var shimmerOffset: CGFloat = -200
     @Published var splashOpacity: Double = 1.0
+
+    /// 0 = pure black (matches storyboard), 1 = systemBackground.
+    /// Animates from 0 → 1 so the background gracefully shifts from the
+    /// storyboard's black to the app's actual theme (white or dark)
+    /// while the splash content is already visible on screen.
+    @Published var bgBlend: Double = 0
 
     /// The accent color the user selected (read from UserDefaults so it's
     /// available before AccentColorManager finishes initializing).
@@ -72,6 +80,15 @@ class SplashViewModel: ObservableObject {
             withAnimation(.easeOut(duration: 0.4).delay(0.15)) {
                 self?.subtitleOpacity = 1.0
                 self?.subtitleOffset = 0
+            }
+        }
+
+        // Background blend: black → systemBackground (0.8s)
+        // Starts after the logo is already visible so the user sees
+        // content before the background shifts.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
+            withAnimation(.easeOut(duration: 0.6)) {
+                self?.bgBlend = 1.0
             }
         }
 
