@@ -58,7 +58,7 @@ struct FeatherApp: App {
                                                 .onAppear { splashVM.start() }
                                 }
                         }
-                        .background(Color.black.ignoresSafeArea())
+                        .background(Color(uiColor: .systemBackground).ignoresSafeArea())
                 }
                 .onChange(of: scenePhase) { phase in
                         if phase == .active {
@@ -145,7 +145,8 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     
     /// Applies the user's preferred appearance (dark/light/system) as early as
     /// possible in the launch cycle so that the first SwiftUI frame already
-    /// respects the chosen theme — preventing a white flash on dark-mode launch.
+    /// respects the chosen theme — preventing a flash during the storyboard →
+    /// SwiftUI transition in both light and dark modes.
     private func _applyAppearanceEarly() {
         let raw = UserDefaults.standard.integer(forKey: "Feather.userInterfaceStyle")
         let style = UIUserInterfaceStyle(rawValue: raw) ?? .unspecified
@@ -155,7 +156,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
                 .flatMap { $0.windows }
                 .forEach { window in
                     window.overrideUserInterfaceStyle = style
-                    window.backgroundColor = .black
+                    // Use systemBackground so the window itself matches the
+                    // storyboard's systemBackgroundColor in both light & dark.
+                    window.backgroundColor = .systemBackground
                 }
         }
     }

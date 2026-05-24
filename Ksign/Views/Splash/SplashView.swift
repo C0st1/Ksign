@@ -5,6 +5,7 @@
 //  Reworked animated launch screen with full theme sync.
 //  Reads the user's accent color & appearance preferences directly
 //  from UserDefaults — no dependency on AccentColorManager startup timing.
+//  Fully adaptive: matches the system/app appearance in both light & dark.
 //
 
 import SwiftUI
@@ -43,15 +44,16 @@ struct SplashView: View {
 
     @ViewBuilder
     private var backgroundLayer: some View {
-        // Always-black base matches the storyboard launch screen,
-        // eliminating any white flash during the storyboard → SwiftUI transition.
-        Color.black
+        // Adaptive base: white in light mode, black in dark mode — matches
+        // the storyboard's systemBackgroundColor exactly so there is zero
+        // visible flash during the storyboard → SwiftUI transition.
+        Color(uiColor: .systemBackground)
             .ignoresSafeArea()
 
         // Subtle radial glow behind the logo
         RadialGradient(
             colors: [
-                vm.accentColor.opacity(colorScheme == .dark ? 0.12 : 0.07),
+                vm.accentColor.opacity(colorScheme == .dark ? 0.12 : 0.06),
                 .clear,
             ],
             center: .center,
@@ -72,8 +74,8 @@ struct SplashView: View {
                 .fill(
                     RadialGradient(
                         colors: [
-                            vm.accentColor.opacity(0.35),
-                            vm.accentColor.opacity(0.08),
+                            vm.accentColor.opacity(colorScheme == .dark ? 0.35 : 0.20),
+                            vm.accentColor.opacity(colorScheme == .dark ? 0.08 : 0.04),
                             .clear,
                         ],
                         center: .center,
@@ -106,9 +108,18 @@ struct SplashView: View {
                 LinearGradient(
                     stops: [
                         .init(color: .clear, location: 0.0),
-                        .init(color: .white.opacity(0.25), location: 0.45),
-                        .init(color: .white.opacity(0.35), location: 0.5),
-                        .init(color: .white.opacity(0.25), location: 0.55),
+                        .init(color: colorScheme == .dark
+                              ? Color.white.opacity(0.25)
+                              : Color.white.opacity(0.45),
+                              location: 0.45),
+                        .init(color: colorScheme == .dark
+                              ? Color.white.opacity(0.35)
+                              : Color.white.opacity(0.55),
+                              location: 0.5),
+                        .init(color: colorScheme == .dark
+                              ? Color.white.opacity(0.25)
+                              : Color.white.opacity(0.45),
+                              location: 0.55),
                         .init(color: .clear, location: 1.0),
                     ],
                     startPoint: .leading,
