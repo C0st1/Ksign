@@ -143,7 +143,7 @@ struct SplashView: View {
                 .opacity(vm.titleOpacity)
                 .offset(y: vm.titleOffset)
 
-            Text(.localized("Sign. Install. Enjoy."))
+            Text(String.localized("Sign. Install. Enjoy."))
                 .font(.system(size: 15, weight: .medium, design: .rounded))
                 .foregroundStyle(.secondary)
                 .opacity(vm.subtitleOpacity)
@@ -169,20 +169,12 @@ struct SplashView: View {
                 .padding(.horizontal, 60)
                 .opacity(vm.subtitleOpacity)
 
-            Text("v\(Bundle.main.appVersion)")
+            Text("v\(Bundle.main.version)")
                 .font(.system(size: 12, weight: .regular, design: .monospaced))
                 .foregroundStyle(.tertiary)
                 .padding(.top, 12)
                 .padding(.bottom, 24)
                 .opacity(vm.subtitleOpacity)
         }
-    }
-}
-
-// MARK: - Bundle helper
-
-private extension Bundle {
-    var appVersion: String {
-        return infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
     }
 }
