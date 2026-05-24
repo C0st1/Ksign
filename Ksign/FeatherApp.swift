@@ -58,6 +58,7 @@ struct FeatherApp: App {
                                                 .onAppear { splashVM.start() }
                                 }
                         }
+                        .background(Color(uiColor: .systemBackground).ignoresSafeArea())
                 }
                 .onChange(of: scenePhase) { phase in
                         if phase == .active {
