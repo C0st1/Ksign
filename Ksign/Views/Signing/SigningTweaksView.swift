@@ -375,9 +375,13 @@ struct SigningTweaksView: View {
                                         }
                                 }
 
-                                // Loose tweaks (quick toggle — no folder navigation needed)
-                                if !_tweaksInDirectory.isEmpty {
-                                        ForEach(_tweaksInDirectory, id: \.absoluteString) { tweak in
+                                // Loose tweaks that are NOT already in the injection list
+                                // (avoids conflict with the "Added Tweaks" section)
+                                let availableLoose = _tweaksInDirectory.filter {
+                                        !options.injectionFiles.contains($0)
+                                }
+                                if !availableLoose.isEmpty {
+                                        ForEach(availableLoose, id: \.absoluteString) { tweak in
                                                 _file(tweak: tweak, isFromOptions: false)
                                         }
                                 }
@@ -528,6 +532,28 @@ struct SigningTweaksView: View {
             }
         }
     }
+
+    /// Check dependencies for a single tweak that was just toggled ON
+    /// from the "Available Tweaks" section (not imported).
+    /// Shows the DependencyCheckSheet if any deps are missing.
+    private func _checkDependenciesForTweak(_ tweak: URL) {
+        let currentFiles = options.injectionFiles
+        DispatchQueue.global(qos: .userInitiated).async {
+            let result = TweakDependencyResolver.resolve(
+                tweakURL: tweak,
+                injectionFiles: currentFiles
+            )
+
+            // Only show the sheet if there are unresolved deps —
+            // don't interrupt the user with "all good" sheets.
+            guard !result.unresolved.isEmpty else { return }
+
+            DispatchQueue.main.async {
+                _dependencyCheckTweakName = tweak.lastPathComponent
+                _dependencyCheckResult = result
+            }
+        }
+    }
 }
 
 // MARK: - Extension: View
@@ -551,6 +577,8 @@ extension SigningTweaksView {
                                                         _enabledTweaks.insert(tweak)
                                                         if !options.injectionFiles.contains(tweak) {
                                                                 options.injectionFiles.append(tweak)
+                                                                // Trigger dependency check for this newly-added tweak (Feature 2)
+                                                                _checkDependenciesForTweak(tweak)
                                                         }
                                                 } else {
                                                         _enabledTweaks.remove(tweak)

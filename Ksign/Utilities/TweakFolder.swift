@@ -84,6 +84,8 @@ struct TweakFolder: Identifiable, Hashable {
     }
 
     /// Subfolders (one level deep — no nesting beyond 2 levels to keep UI simple).
+    /// Excludes .framework/.bundle/.appex directories — those are tweak files,
+    /// not organizational folders.
     var subfolders: [TweakFolder] {
         let contents = (try? FileManager.default.contentsOfDirectory(
             at: url,
@@ -91,7 +93,14 @@ struct TweakFolder: Identifiable, Hashable {
             options: [.skipsHiddenFiles]
         )) ?? []
         return contents
-            .filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
+            .filter { url in
+                // Must be a directory
+                guard (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true else {
+                    return false
+                }
+                // But NOT a .framework/.bundle/.appex (those are tweak bundles, not folders)
+                return !TweakFile.isTweak(url)
+            }
             .map { TweakFolder(url: $0) }
             .sorted { $0.name < $1.name }
     }
@@ -233,7 +242,9 @@ final class TweakLibraryManager: ObservableObject {
 
         for url in contents {
             let isDir = (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true
-            if isDir {
+            // .framework/.bundle/.appex are directories BUT they are tweak bundles,
+            // not organizational folders — treat them as loose tweaks.
+            if isDir && !TweakFile.isTweak(url) {
                 newFolders.append(TweakFolder(url: url))
             } else if TweakFile.isTweak(url) {
                 newLoose.append(url)

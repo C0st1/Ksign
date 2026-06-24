@@ -147,20 +147,40 @@ enum TweakLoadOrderValidator {
     static func autoFix(order: [URL]) -> [URL] {
         guard order.count > 1 else { return order }
 
-        // Move Substrate/ElleKit to position 0
+        // Step 1: Identify substrate/ellekit providers and move them to the front
         var reordered = order
-        if let substrateIdx = reordered.firstIndex(where: {
-            let bn = $0.lastPathComponent.lowercased()
-            return bn.contains("cydiasubstrate") || bn.contains("ellekit")
-        }) {
-            let substrate = reordered.remove(at: substrateIdx)
-            reordered.insert(substrate, at: 0)
+        var substrateProviders: [URL] = []
+        var remaining: [URL] = []
+
+        for url in reordered {
+            let bn = url.lastPathComponent.lowercased()
+            if bn.contains("cydiasubstrate") || bn.contains("ellekit") || bn.contains("libhooker") {
+                substrateProviders.append(url)
+            } else {
+                remaining.append(url)
+            }
         }
 
-        // Topologically sort the rest based on dependencies
-        // (a tweak that depends on another should come after it)
-        let sorted = _topologicalSort(reordered)
-        return sorted
+        // Step 2: Build a "provides" map — which tweak provides which substrate
+        // e.g. ellekit.deb provides "CydiaSubstrate"
+        var providesMap: [String: URL] = [:]  // "cydiasubstrate" -> ellekit.deb URL
+        for url in substrateProviders {
+            let bn = url.lastPathComponent.lowercased()
+            if bn.contains("ellekit") {
+                providesMap["cydiasubstrate"] = url
+                providesMap["ellekit"] = url
+            } else if bn.contains("cydiasubstrate") {
+                providesMap["cydiasubstrate"] = url
+            } else if bn.contains("libhooker") {
+                providesMap["libhooker"] = url
+            }
+        }
+
+        // Step 3: Topologically sort `remaining` based on their dependencies
+        let sorted = _topologicalSort(remaining, providesMap: providesMap, allTweaks: reordered)
+
+        // Step 4: Substrate providers first, then sorted tweaks
+        return substrateProviders + sorted
     }
 
     // MARK: - Private Helpers
@@ -183,20 +203,44 @@ enum TweakLoadOrderValidator {
 
     /// Topological sort: a tweak that depends on another comes after it.
     /// If a cycle is detected, returns the input unchanged.
-    private static func _topologicalSort(_ tweaks: [URL]) -> [URL] {
-        // Build adjacency: deps[tweak] = [tweaks it depends on]
+    ///
+    /// - Parameters:
+    ///   - tweaks: The tweaks to sort (substrate providers already removed)
+    ///   - providesMap: Map of "cydiasubstrate" → URL that provides it
+    ///   - allTweaks: All tweaks (for basename lookup of inter-tweak deps)
+    private static func _topologicalSort(
+        _ tweaks: [URL],
+        providesMap: [String: URL],
+        allTweaks: [URL]
+    ) -> [URL] {
+        // Build adjacency: deps[tweak basename] = [basenames it depends on]
         var deps: [String: Set<String>] = [:]
-        let basenames = Set(tweaks.map { $0.lastPathComponent })
+        let allBasenames = Set(allTweaks.map { $0.lastPathComponent })
 
         for tweak in tweaks {
             let basename = tweak.lastPathComponent
             let linked = _readLinkedDylibs(at: tweak)
             var dependencies: Set<String> = []
+
             for entry in linked {
                 if _isSystemPath(entry.path) { continue }
                 if entry.basename == basename { continue }
-                if basenames.contains(entry.basename) {
+
+                // Case 1: direct tweak-to-tweak dependency (by basename match)
+                if allBasenames.contains(entry.basename) {
                     dependencies.insert(entry.basename)
+                    continue
+                }
+
+                // Case 2: substrate dependency — check the providesMap
+                let depLower = entry.basename.lowercased()
+                if let provider = providesMap[depLower] {
+                    let providerBasename = provider.lastPathComponent
+                    // Only add if the provider is in our sort set (it won't be —
+                    // substrate providers are already at the front). So we don't
+                    // add a dep edge, but we also don't need to — the provider is
+                    // already guaranteed to be before this tweak.
+                    _ = providerBasename
                 }
             }
             deps[basename] = dependencies
