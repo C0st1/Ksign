@@ -26,6 +26,7 @@ struct TweakLibraryView: View {
     @State private var _isEditMode: EditMode = .inactive
     @State private var _selectedTweaks: Set<String> = []  // tweak paths
     @State private var _bulkMoving: Bool = false
+    @State private var _showBulkMove = false
 
     var body: some View {
         NBList(.localized("Tweak Library"), displayMode: .inline) {
@@ -151,6 +152,14 @@ struct TweakLibraryView: View {
                 allowsMultipleSelection: true,
                 onDocumentsPicked: { urls in
                     _importTweaks(urls: urls)
+                }
+            )
+        }
+        .sheet(isPresented: $_showBulkMove) {
+            BulkTweakMovePickerView(
+                tweakCount: _selectedTweaks.count,
+                onMove: { folder in
+                    _performBulkMove(to: folder)
                 }
             )
         }
@@ -353,18 +362,22 @@ struct TweakLibraryView: View {
         )
     }
 
-    /// Bulk move all selected tweaks. Opens the move picker for the first tweak,
-    /// then moves all selected tweaks to the chosen folder.
+    /// Bulk move all selected tweaks — opens a folder picker sheet.
     private func _bulkMoveSelected() {
         guard !_selectedTweaks.isEmpty else { return }
-        // For bulk move, we'll move them to root first, then the user can
-        // use the move picker from the toolbar on individual tweaks.
-        // A proper bulk-move picker would need a new view, but for now
-        // we move them to root as a batch operation.
+        _showBulkMove = true
+    }
+
+    /// Actually move selected tweaks to the chosen folder (or root).
+    private func _performBulkMove(to folder: TweakFolder?) {
         let selected = _selectedTweaks
         for path in selected {
             let url = URL(fileURLWithPath: path)
-            try? _manager.moveTweakToRoot(url)
+            if let folder = folder {
+                try? _manager.moveTweak(url, to: folder)
+            } else {
+                try? _manager.moveTweakToRoot(url)
+            }
         }
         withAnimation(.snappy) {
             _isEditMode = .inactive
@@ -448,6 +461,7 @@ struct FolderDetailView: View {
     // Multi-select state (only used in library browsing context, not injection)
     @State private var _isEditMode: EditMode = .inactive
     @State private var _selectedTweaks: Set<String> = []
+    @State private var _showBulkMove = false
 
     /// Whether we're in injection context (options binding present)
     private var _isInjectionContext: Bool { options != nil }
@@ -546,6 +560,14 @@ struct FolderDetailView: View {
         .sheet(item: $_movingTweak) { tweak in
             TweakMovePickerView(tweak: tweak)
         }
+        .sheet(isPresented: $_showBulkMove) {
+            BulkTweakMovePickerView(
+                tweakCount: _selectedTweaks.count,
+                onMove: { folder in
+                    _performBulkMove(to: folder)
+                }
+            )
+        }
         .onAppear { _manager.refresh() }
     }
 
@@ -594,13 +616,22 @@ struct FolderDetailView: View {
         )
     }
 
-    /// Bulk move all selected tweaks to root.
+    /// Bulk move all selected tweaks — opens a folder picker sheet.
     private func _bulkMoveSelected() {
         guard !_selectedTweaks.isEmpty else { return }
+        _showBulkMove = true
+    }
+
+    /// Actually move selected tweaks to the chosen folder (or root).
+    private func _performBulkMove(to destFolder: TweakFolder?) {
         let selected = _selectedTweaks
         for path in selected {
             let url = URL(fileURLWithPath: path)
-            try? _manager.moveTweakToRoot(url)
+            if let destFolder = destFolder {
+                try? _manager.moveTweak(url, to: destFolder)
+            } else {
+                try? _manager.moveTweakToRoot(url)
+            }
         }
         withAnimation(.snappy) {
             _isEditMode = .inactive
@@ -879,6 +910,97 @@ struct TweakMovePickerView: View {
         do {
             let folder = try _manager.createFolder(name: name)
             try _manager.moveTweak(tweak, to: folder)
+            _dismiss()
+        } catch {
+            UIAlertController.showAlertWithOk(
+                title: .localized("Error"),
+                message: error.localizedDescription
+            )
+        }
+        _newFolderName = ""
+    }
+}
+
+// MARK: - BulkTweakMovePickerView
+
+/// Sheet that lets the user pick a destination folder for multiple selected tweaks.
+/// Shows all existing folders + "Move to root (loose)" + "Create new folder".
+struct BulkTweakMovePickerView: View {
+    let tweakCount: Int
+    let onMove: (TweakFolder?) -> Void
+    @Environment(\.dismiss) private var _dismiss
+    @StateObject private var _manager = TweakLibraryManager.shared
+    @State private var _showCreateFolder = false
+    @State private var _newFolderName = ""
+
+    var body: some View {
+        NBNavigationView(.localized("Move %lld Tweaks", arguments: tweakCount), displayMode: .inline) {
+            List {
+                if !_manager.folders.isEmpty {
+                    Section(.localized("Folders")) {
+                        ForEach(_manager.folders) { folder in
+                            Button {
+                                onMove(folder)
+                                _dismiss()
+                            } label: {
+                                HStack {
+                                    Image(systemName: "folder.fill")
+                                        .foregroundStyle(Color.accentColor)
+                                    Text(folder.name)
+                                    Spacer()
+                                    Text(verbatim: "\(folder.tweakCount)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+
+                Section {
+                    Button {
+                        onMove(nil)
+                        _dismiss()
+                    } label: {
+                        HStack {
+                            Image(systemName: "folder.badge.minus")
+                                .foregroundStyle(Color.accentColor)
+                            Text(.localized("Move to root (loose)"))
+                            Spacer()
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                Section {
+                    Button {
+                        _showCreateFolder = true
+                    } label: {
+                        Label(.localized("Create new folder"), systemImage: "folder.badge.plus")
+                    }
+                }
+            }
+            .toolbar {
+                NBToolbarButton(role: .close)
+            }
+        }
+        .alert(.localized("New Folder"), isPresented: $_showCreateFolder) {
+            TextField(.localized("Folder name"), text: $_newFolderName)
+            Button(.localized("Cancel"), role: .cancel) { _newFolderName = "" }
+            Button(.localized("Create")) {
+                _createAndMove()
+            }
+        }
+        .onAppear { _manager.refresh() }
+    }
+
+    private func _createAndMove() {
+        let name = _newFolderName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return }
+        do {
+            let folder = try _manager.createFolder(name: name)
+            onMove(folder)
             _dismiss()
         } catch {
             UIAlertController.showAlertWithOk(

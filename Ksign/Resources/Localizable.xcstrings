@@ -14806,6 +14806,28 @@
           }
         }
       }
+    },
+    "Suggested Sources": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suggested Sources"
+          }
+        }
+      }
+    },
+    "Move %lld Tweaks": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move %lld Tweaks"
+          }
+        }
+      }
     }
   },
   "version": "1.1"

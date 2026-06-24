@@ -21,6 +21,7 @@ struct SigningTweaksView: View {
         @State private var _isValidating = false
         @State private var _dependencyCheckResult: DependencyResolutionResult?
         @State private var _dependencyCheckTweakName: String = ""
+        @ObservedObject private var _tweakLibraryManager = TweakLibraryManager.shared
         @State private var _isRescanning = false
 
         @Binding var options: Options
@@ -351,7 +352,7 @@ struct SigningTweaksView: View {
 
         @ViewBuilder
         private var _availableTweaksSection: some View {
-                let manager = TweakLibraryManager.shared
+                let manager = _tweakLibraryManager
 
                 // Show ALL loose tweaks — the toggle shows whether each is injected.
                 // Don't filter out injected ones; the toggle IS the inject control.

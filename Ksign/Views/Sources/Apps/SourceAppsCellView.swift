@@ -13,7 +13,7 @@ import NukeUI
 
 // thats a whole pharaghraph of codes
 struct SourceAppsCellView: View {
-    @AppStorage("Feather.storeCellAppearance") private var _storeCellAppearance: Int = 0
+    @AppStorage("Feather.storeCellAppearance") private var _storeCellAppearance: Int = 1
     
     var source: ASRepository
     var app: ASRepository.App

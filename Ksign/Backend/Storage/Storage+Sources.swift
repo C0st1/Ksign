@@ -93,20 +93,21 @@ extension Storage {
 
 
         func addBuiltInSources() {
-                let builtInSourceURLs = [
-            "https://raw.githubusercontent.com/C0st1/Ksign/refs/heads/main/repo.json",
-            "https://community-apps.sidestore.io/sidecommunity.json",
-            "https://xitrix.github.io/iTorrent/AltStore.json",
-                        "https://repository.apptesters.org",
-            "https://github.com/LiveContainer/LiveContainer/releases/download/1.0/apps.json",
-                        "https://ipa.cypwn.xyz/cypwn.json",
-            "https://alt.crystall1ne.dev"
-                ]
-                
-                for urlString in builtInSourceURLs {
-                        FR.handleSource(urlString) { }
-                }
+                // Only add the Ksign repo by default.
+                // Other sources can be added by the user via SourcesAddView.
+                let ksignSourceURL = "https://raw.githubusercontent.com/C0st1/Ksign/refs/heads/main/repo.json"
+                FR.handleSource(ksignSourceURL) { }
         }
+
+        /// Suggested sources the user can optionally add from SourcesAddView.
+        static let suggestedSourceURLs: [(name: String, url: String)] = [
+                ("SideStore Community", "https://community-apps.sidestore.io/sidecommunity.json"),
+                ("iTorrent", "https://xitrix.github.io/iTorrent/AltStore.json"),
+                ("AppTesters", "https://repository.apptesters.org"),
+                ("LiveContainer", "https://github.com/LiveContainer/LiveContainer/releases/download/1.0/apps.json"),
+                ("Cypwn", "https://ipa.cypwn.xyz/cypwn.json"),
+                ("Crystall1ne", "https://alt.crystall1ne.dev")
+        ]
 
         func deleteSource(for source: AltSource) {
                 context.delete(source)
