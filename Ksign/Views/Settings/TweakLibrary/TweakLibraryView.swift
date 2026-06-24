@@ -232,6 +232,19 @@ struct TweakLibraryView: View {
             }
             .buttonStyle(.borderless)
         }
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive) {
+                try? _manager.deleteTweak(tweak)
+            } label: {
+                Label(.localized("Delete"), systemImage: "trash")
+            }
+            Button {
+                _movingTweak = tweak
+            } label: {
+                Label(.localized("Move"), systemImage: "folder")
+            }
+            .tint(.accentColor)
+        }
     }
 
     // MARK: - Actions
@@ -307,6 +320,7 @@ struct FolderDetailView: View {
     var options: Binding<Options>? = nil
     @StateObject private var _manager = TweakLibraryManager.shared
     @State private var _showImportTweaks = false
+    @State private var _movingTweak: URL?
 
     var body: some View {
         NBList(folder.name, displayMode: .inline) {
@@ -342,6 +356,17 @@ struct FolderDetailView: View {
             }
         }
         .toolbar {
+            NBToolbarMenu(
+                systemImage: "plus",
+                style: .icon,
+                placement: .topBarTrailing
+            ) {
+                Button {
+                    _showImportTweaks = true
+                } label: {
+                    Label(.localized("Import Tweaks"), systemImage: "tray.and.arrow.down")
+                }
+            }
             NBToolbarButton(role: .close)
         }
         .sheet(isPresented: $_showImportTweaks) {
@@ -352,6 +377,9 @@ struct FolderDetailView: View {
                     _importTweaksIntoFolder(urls: urls)
                 }
             )
+        }
+        .sheet(item: $_movingTweak) { tweak in
+            TweakMovePickerView(tweak: tweak)
         }
         .onAppear { _manager.refresh() }
     }
@@ -413,6 +441,47 @@ struct FolderDetailView: View {
                     }
                 ))
                 .labelsHidden()
+            }
+
+            // Menu with Move + Delete (for Tweak Library browsing context)
+            if options == nil {
+                Menu {
+                    Button {
+                        _movingTweak = tweak
+                    } label: {
+                        Label(.localized("Move to folder..."), systemImage: "folder")
+                    }
+                    Button {
+                        try? _manager.moveTweakToRoot(tweak)
+                    } label: {
+                        Label(.localized("Move to root"), systemImage: "folder.badge.minus")
+                    }
+                    Divider()
+                    Button(role: .destructive) {
+                        try? _manager.deleteTweak(tweak)
+                    } label: {
+                        Label(.localized("Delete"), systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.borderless)
+            }
+        }
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive) {
+                try? _manager.deleteTweak(tweak)
+            } label: {
+                Label(.localized("Delete"), systemImage: "trash")
+            }
+            if options == nil {
+                Button {
+                    _movingTweak = tweak
+                } label: {
+                    Label(.localized("Move"), systemImage: "folder")
+                }
+                .tint(.accentColor)
             }
         }
     }
