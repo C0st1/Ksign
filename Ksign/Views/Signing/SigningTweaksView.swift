@@ -53,12 +53,12 @@ struct SigningTweaksView: View {
                                 _injectionOrderSection
                         }
 
-                        // Added Tweaks — grouped by source folder (read-only summary when order section is shown)
+                        // Injected Tweaks — tweaks currently in the injection list
                         if !options.injectionFiles.isEmpty {
-                                _addedTweaksGrouped
+                                _injectedTweaksSection
                         }
 
-                        // Available Tweaks — folder browser
+                        // Available Tweaks — tweaks on disk NOT in the injection list
                         _availableTweaksSection
                 }
                 .overlay(alignment: .center) {
@@ -285,61 +285,80 @@ struct SigningTweaksView: View {
                 }
         }
 
-        // MARK: - Added Tweaks Grouped by Folder
+        // MARK: - Injected Tweaks Section (tweaks in options.injectionFiles)
 
         @ViewBuilder
-        private var _addedTweaksGrouped: some View {
-                // Group injection files by their containing folder
-                let grouped = _groupInjectionFilesByFolder(options.injectionFiles)
+        private var _injectedTweaksSection: some View {
+                NBSection(.localized("Injected Tweaks"), secondary: options.injectionFiles.count.description) {
+                        ForEach(options.injectionFiles, id: \.path) { tweak in
+                                _injectedTweakRow(tweak)
+                        }
+                }
+        }
 
-                ForEach(grouped, id: \.0) { (folderName, tweaks) in
-                        NBSection(folderName, secondary: tweaks.count.description) {
-                                ForEach(tweaks, id: \.absoluteString) { tweak in
-                                        _file(tweak: tweak, isFromOptions: true)
+        @ViewBuilder
+        private func _injectedTweakRow(_ tweak: URL) -> some View {
+                HStack(spacing: 10) {
+                        Image(systemName: TweakFile.icon(for: tweak.pathExtension))
+                                .foregroundStyle(Color.accentColor)
+                                .frame(width: 24)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                                Text(tweak.lastPathComponent)
+                                        .font(.body)
+                                        .lineLimit(1)
+                                // Show the source folder as a subtitle
+                                if let folder = tweak.containingTweakFolder {
+                                        Text(folder.name)
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                } else {
+                                        Text(verbatim: .localized("Root"))
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
                                 }
                         }
-                }
-        }
 
-        /// Group injection files by their source folder.
-        /// Returns an array of (folderName, tweaks) tuples, sorted:
-        /// - Named folders first (alphabetical)
-        /// - "Loose Tweaks" last
-        private func _groupInjectionFilesByFolder(_ files: [URL]) -> [(String, [URL])] {
-                var grouped: [String: [URL]] = [:]
+                        Spacer()
 
-                for file in files {
-                        let folderName: String
-                        if let folder = file.containingTweakFolder {
-                                folderName = folder.name
-                        } else {
-                                folderName = .localized("Loose Tweaks")
+                        // Substrate badge
+                        let bn = tweak.lastPathComponent.lowercased()
+                        if bn.contains("substrate") || bn.contains("ellekit") || bn.contains("libhooker") {
+                                Text(verbatim: .localized("Substrate"))
+                                        .font(.caption2)
+                                        .foregroundStyle(.yellow)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(Color.yellow.opacity(0.15))
+                                        .clipShape(Capsule())
                         }
-                        grouped[folderName, default: []].append(file)
                 }
-
-                // Sort: named folders alphabetical, "Loose Tweaks" last
-                let looseKey = String.localized("Loose Tweaks")
-                let sortedKeys = grouped.keys.sorted { a, b in
-                        if a == looseKey { return false }
-                        if b == looseKey { return true }
-                        return a < b
-                }
-
-                return sortedKeys.compactMap { key in
-                        guard let tweaks = grouped[key] else { return nil }
-                        return (key, tweaks.sorted { $0.lastPathComponent < $1.lastPathComponent })
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        // Remove from injection list ONLY (don't delete from disk)
+                        Button(role: .destructive) {
+                                if let index = options.injectionFiles.firstIndex(where: { $0.path == tweak.path }) {
+                                        options.injectionFiles.remove(at: index)
+                                }
+                                _enabledTweaks = Set(options.injectionFiles)
+                                _loadTweaks()
+                        } label: {
+                                Label(.localized("Remove"), systemImage: "minus.circle")
+                        }
                 }
         }
 
-        // MARK: - Available Tweaks Section
+        // MARK: - Available Tweaks Section (tweaks on disk NOT in injection list)
 
         @ViewBuilder
         private var _availableTweaksSection: some View {
                 let manager = TweakLibraryManager.shared
+                let injectionPaths = Set(options.injectionFiles.map { $0.path })
 
-                // Show folder navigation if folders exist
-                if !manager.folders.isEmpty || !_tweaksInDirectory.isEmpty {
+                // Available loose tweaks = in root folder, not in injection list
+                let availableLoose = _tweaksInDirectory.filter { !injectionPaths.contains($0.path) }
+
+                // Show if there are folders OR available loose tweaks
+                if !manager.folders.isEmpty || !availableLoose.isEmpty {
                         NBSection(.localized("Available Tweaks")) {
                                 // Smart folder shortcuts
                                 NavigationLink {
@@ -357,7 +376,7 @@ struct SigningTweaksView: View {
                                         }
                                 }
 
-                                // User folders
+                                // User folders (drill-down to pick tweaks)
                                 ForEach(manager.folders) { folder in
                                         NavigationLink {
                                                 FolderDetailView(folder: folder)
@@ -375,18 +394,58 @@ struct SigningTweaksView: View {
                                         }
                                 }
 
-                                // Loose tweaks that are NOT already in the injection list
-                                // (avoids conflict with the "Added Tweaks" section)
-                                // Use path comparison — URL equality fails after JSON serialization
-                                let injectionPaths = Set(options.injectionFiles.map { $0.path })
-                                let availableLoose = _tweaksInDirectory.filter {
-                                        !injectionPaths.contains($0.path)
+                                // Available loose tweaks (toggle to inject)
+                                ForEach(availableLoose, id: \.path) { tweak in
+                                        _availableTweakRow(tweak)
                                 }
-                                if !availableLoose.isEmpty {
-                                        ForEach(availableLoose, id: \.absoluteString) { tweak in
-                                                _file(tweak: tweak, isFromOptions: false)
+                        }
+                }
+        }
+
+        @ViewBuilder
+        private func _availableTweakRow(_ tweak: URL) -> some View {
+                let injectionPaths = Set(options.injectionFiles.map { $0.path })
+                let isInjected = injectionPaths.contains(tweak.path)
+
+                HStack(spacing: 10) {
+                        Image(systemName: TweakFile.icon(for: tweak.pathExtension))
+                                .foregroundStyle(Color.accentColor)
+                                .frame(width: 24)
+
+                        Text(tweak.lastPathComponent)
+                                .lineLimit(2)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+
+                        Toggle("", isOn: Binding(
+                                get: { isInjected },
+                                set: { newValue in
+                                        if newValue {
+                                                if !options.injectionFiles.contains(where: { $0.path == tweak.path }) {
+                                                        options.injectionFiles.append(tweak)
+                                                        _enabledTweaks.insert(tweak)
+                                                        _checkDependenciesForTweak(tweak)
+                                                }
+                                        } else {
+                                                if let index = options.injectionFiles.firstIndex(where: { $0.path == tweak.path }) {
+                                                        options.injectionFiles.remove(at: index)
+                                                }
+                                                _enabledTweaks.remove(tweak)
                                         }
                                 }
+                        ))
+                        .labelsHidden()
+                }
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        // Delete from DISK (since it's not injected)
+                        Button(role: .destructive) {
+                                do {
+                                        try FileManager.default.removeItem(at: tweak)
+                                        } catch {
+                                        print("Error deleting tweak: \(error)")
+                                }
+                                _loadTweaks()
+                        } label: {
+                                Label(.localized("Delete"), systemImage: "trash")
                         }
                 }
         }
@@ -560,65 +619,6 @@ struct SigningTweaksView: View {
 
 // MARK: - Extension: View
 extension SigningTweaksView {
-        @ViewBuilder
-        private func _file(tweak: URL, isFromOptions: Bool) -> some View {
-                HStack(spacing: 10) {
-                        Image(systemName: TweakFile.icon(for: tweak.pathExtension))
-                                .foregroundStyle(Color.accentColor)
-                                .frame(width: 24)
-
-                        Text(tweak.lastPathComponent)
-                                .lineLimit(2)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-
-                        if !isFromOptions {
-                                Toggle("", isOn: Binding(
-                                        get: { _enabledTweaks.contains(tweak) },
-                                        set: { newValue in
-                                                if newValue {
-                                                        _enabledTweaks.insert(tweak)
-                                                        if !options.injectionFiles.contains(tweak) {
-                                                                options.injectionFiles.append(tweak)
-                                                                // Trigger dependency check for this newly-added tweak (Feature 2)
-                                                                _checkDependenciesForTweak(tweak)
-                                                        }
-                                                } else {
-                                                        _enabledTweaks.remove(tweak)
-                                                        if let index = options.injectionFiles.firstIndex(of: tweak) {
-                                                                options.injectionFiles.remove(at: index)
-                                                        }
-                                                }
-                                        }
-                                ))
-                                .labelsHidden()
-                        }
-                }
-                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) {
-                                if isFromOptions {
-                                        FileManager.default.deleteStored(tweak) { url in
-                                                if let index = options.injectionFiles.firstIndex(where: { $0 == url }) {
-                                                        options.injectionFiles.remove(at: index)
-                                                }
-                                                _loadTweaks()
-                                        }
-                                } else {
-                                        do {
-                                                try FileManager.default.removeItem(at: tweak)
-                                                if let index = options.injectionFiles.firstIndex(of: tweak) {
-                                                        options.injectionFiles.remove(at: index)
-                                                }
-                                                _enabledTweaks.remove(tweak)
-                                                _loadTweaks()
-                                        } catch {
-                                                print("Error deleting tweak: \(error)")
-                                        }
-                                }
-                        } label: {
-                                Label(.localized("Delete"), systemImage: "trash")
-                        }
-                }
-        }
 }
 
 // MARK: - TweakInjectionPickerView
