@@ -221,11 +221,7 @@ final class UpdateManager: ObservableObject {
                 // Handle "ignore this version only" logic:
                 // If the user ignored a specific version AND a newer version is now available,
                 // clear the ignore so they get notified about the new version.
-<<<<<<< HEAD
-                if preference == .ignore,
-=======
                 if preference == AppUpdatePreference.ignore,
->>>>>>> 5e8121a (Add 5 features + fix iOS 26 SDK build errors)
                    let ignoredVersion = UpdatePreferencesStore.shared.ignoredVersion(for: bundleId),
                    ignoredVersion != availableVersion {
                     // A new version is available that's different from the ignored one —
