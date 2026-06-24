@@ -127,6 +127,18 @@ struct Options: Codable, Equatable {
         var notifyOnUpdates: Bool
         /// If Ksign should check for updates in the background
         var backgroundUpdateCheck: Bool
+        /// Default update preference for apps without a per-app setting
+        /// ("Auto-Update" / "Notify" / "Ignore"). Defaults to "Notify".
+        var defaultUpdatePreference: String
+        /// If background maintenance (full source refresh + update detection +
+        /// auto-update + cleanup + cert check) is enabled
+        var backgroundMaintenanceEnabled: Bool
+        /// If background maintenance requires the device to be charging
+        var backgroundMaintenanceRequiresCharging: Bool
+        /// Background maintenance interval in hours (6, 12, 24)
+        var backgroundMaintenanceInterval: Int
+        /// If auto-downloaded updates should also be auto-installed
+        var autoInstallAutoUpdates: Bool
         // default
         static let defaultOptions = Options(
                 appAppearance: "Default",
@@ -167,7 +179,12 @@ struct Options: Codable, Equatable {
                 injectFolder: .frameworks,
                 checkForUpdates: true,
                 notifyOnUpdates: false,
-                backgroundUpdateCheck: true
+                backgroundUpdateCheck: true,
+                defaultUpdatePreference: "Notify",
+                backgroundMaintenanceEnabled: true,
+                backgroundMaintenanceRequiresCharging: true,
+                backgroundMaintenanceInterval: 12,
+                autoInstallAutoUpdates: false
         )
         // extraction library values
         static let extractionLibraryValues = ["Zip", "ZIPFoundation"]

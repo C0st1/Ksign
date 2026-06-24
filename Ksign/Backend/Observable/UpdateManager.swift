@@ -151,6 +151,7 @@ final class UpdateManager: ObservableObject {
     /// Core matching logic — runs off the main thread
     private func _processUpdates(installedApps: [AppInfoPresentable], sources: [AltSource: ASRepository]) {
         var newUpdates: [String: AppUpdate] = [:]
+        var autoUpdateCandidates: [AppUpdate] = []
 
         // Build a map of bundle ID → best source app across all sources
         var bestSourceApp: [String: (app: ASRepository.App, sourceURL: URL)] = [:]
@@ -211,13 +212,46 @@ final class UpdateManager: ObservableObject {
                 let versionDesc = updateSourceApp.versionDescription
                     ?? updateSourceApp.currentAppVersion?.localizedDescription
 
-                newUpdates[bundleId] = AppUpdate(
-                    installedApp: installed,
+                let availableVersion = updateSourceApp.currentVersion ?? installedVersion
+
+                // Check per-app update preference
+                let preference = UpdatePreferencesStore.shared.preference(for: bundleId)
+
+                // Handle "ignore this version only" logic:
+                // If the user ignored a specific version AND a newer version is now available,
+                // clear the ignore so they get notified about the new version.
+                if preference == .ignore,
+                   let ignoredVersion = UpdatePreferencesStore.shared.ignoredVersion(for: bundleId),
+                   ignoredVersion != availableVersion {
+                    // A new version is available that's different from the ignored one —
+                    // clear the version-specific ignore so the user gets notified.
+                    UpdatePreferencesStore.shared.clear(for: bundleId)
+                    // Re-read the preference (now falls back to global default)
+                    let newPref = UpdatePreferencesStore.shared.preference(for: bundleId)
+                    _handleUpdate(
+                        preference: newPref,
+                        installed: installed,
+                        sourceApp: updateSourceApp,
+                        sourceURL: updateSourceURL,
+                        installedVersion: installedVersion,
+                        availableVersion: availableVersion,
+                        versionDesc: versionDesc,
+                        newUpdates: &newUpdates,
+                        autoUpdateCandidates: &autoUpdateCandidates
+                    )
+                    continue
+                }
+
+                _handleUpdate(
+                    preference: preference,
+                    installed: installed,
                     sourceApp: updateSourceApp,
                     sourceURL: updateSourceURL,
                     installedVersion: installedVersion,
-                    availableVersion: updateSourceApp.currentVersion ?? installedVersion,
-                    versionDescription: versionDesc
+                    availableVersion: availableVersion,
+                    versionDesc: versionDesc,
+                    newUpdates: &newUpdates,
+                    autoUpdateCandidates: &autoUpdateCandidates
                 )
             }
         }
@@ -241,10 +275,94 @@ final class UpdateManager: ObservableObject {
                 self._sendUpdateNotification(newCount: trulyNew.count, totalCount: newUpdates.count)
             }
 
+            // Trigger auto-downloads for apps with .autoUpdate preference
+            for update in autoUpdateCandidates {
+                self._startAutoDownload(for: update)
+            }
+
             // Signal background task completion
             self._backgroundCheckCompletion?()
             self._backgroundCheckCompletion = nil
         }
+    }
+
+    /// Route an update to the appropriate bucket based on the per-app preference.
+    private func _handleUpdate(
+        preference: UpdatePreference,
+        installed: AppInfoPresentable,
+        sourceApp: ASRepository.App,
+        sourceURL: URL,
+        installedVersion: String,
+        availableVersion: String,
+        versionDesc: String?,
+        newUpdates: inout [String: AppUpdate],
+        autoUpdateCandidates: inout [AppUpdate]
+    ) {
+        let update = AppUpdate(
+            installedApp: installed,
+            sourceApp: sourceApp,
+            sourceURL: sourceURL,
+            installedVersion: installedVersion,
+            availableVersion: availableVersion,
+            versionDescription: versionDesc
+        )
+
+        switch preference {
+        case .ignore:
+            // Don't show in updates list, don't auto-download
+            break
+        case .notify:
+            // Show in updates list, user taps "Update" to download
+            newUpdates[installed.identifier ?? ""] = update
+        case .autoUpdate:
+            // Don't show in the visible updates list — it's being handled.
+            // Queue it for auto-download.
+            autoUpdateCandidates.append(update)
+        }
+    }
+
+    /// Start an automatic download for an app with .autoUpdate preference.
+    private func _startAutoDownload(for update: AppUpdate) {
+        guard let downloadURL = update.sourceApp.currentDownloadUrl else {
+            Logger.misc.warning("Auto-update: no download URL for \(update.installedApp.identifier ?? "?")")
+            return
+        }
+
+        let bundleId = update.installedApp.identifier ?? UUID().uuidString
+        let downloadId = "FeatherAutoUpdate_\(bundleId)_\(UUID().uuidString)"
+
+        Logger.misc.info("Auto-update: starting download for \(bundleId) v\(update.availableVersion)")
+
+        _ = DownloadManager.shared.startDownload(
+            from: downloadURL,
+            id: downloadId,
+            sourceURL: update.sourceURL
+        )
+
+        // Send a notification that we started an auto-update
+        _sendAutoUpdateNotification(for: update)
+    }
+
+    /// Notification sent when an auto-update download is triggered.
+    private func _sendAutoUpdateNotification(for update: AppUpdate) {
+        guard OptionsManager.shared.options.notifications else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = String.localized("Auto-Update Started")
+        let appName = update.installedApp.name ?? update.installedApp.identifier ?? .localized("App")
+        content.body = String.localized(
+            "%@ is being updated to %@",
+            arguments: appName, update.availableVersion
+        )
+        content.sound = .default
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 0.1, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: "autoupdate.\(update.installedApp.identifier ?? UUID().uuidString)",
+            content: content,
+            trigger: trigger
+        )
+        UNUserNotificationCenter.current().add(request)
     }
 
     // MARK: - Notifications

@@ -69,6 +69,9 @@ struct SettingsView: View {
                                         NavigationLink(destination: AppFeaturesView()) {
                         Label(.localized("App Features"), systemImage: "sparkles")
                     }
+                                        NavigationLink(destination: TweakLibraryView()) {
+                        Label(.localized("Tweak Library"), systemImage: "folder.badge.gearshape")
+                    }
                                         NavigationLink(destination: ConfigurationView()) {
                         Label(.localized("Signing Options"), systemImage: "gear")
                     }

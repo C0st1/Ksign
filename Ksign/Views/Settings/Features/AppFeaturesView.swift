@@ -8,10 +8,13 @@
 import SwiftUI
 import NimbleViews
 import UserNotifications
+import BackgroundTasks
 
 struct AppFeaturesView: View {
     @StateObject private var _optionsManager = OptionsManager.shared
-    
+    @State private var _showMaintenanceLog = false
+    @State private var _isRunningMaintenance = false
+
     var body: some View {
         NBList(.localized("App Features")) {
             Section {
@@ -57,13 +60,130 @@ struct AppFeaturesView: View {
                     Toggle(isOn: $_optionsManager.options.backgroundUpdateCheck) {
                         Label(.localized("Background Update Check"), systemImage: "arrow.down.circle")
                     }
+                    NavigationLink {
+                        UpdatePreferencesView()
+                    } label: {
+                        Label(.localized("Per-App Update Preferences"), systemImage: "slider.horizontal.3")
+                    }
                 }
             } footer: {
-                Text(.localized("Automatically check for app updates when sources are refreshed. Notifications require download notifications to be enabled."))
+                Text(.localized("Automatically check for app updates when sources are refreshed. Notifications require download notifications to be enabled. Per-app preferences override the global default."))
             }
+
+            // Background Maintenance section (new)
+            _backgroundMaintenanceSection
         }
         .onChange(of: _optionsManager.options) { _ in
             _optionsManager.saveOptions()
+        }
+        .sheet(isPresented: $_showMaintenanceLog) {
+            BackgroundMaintenanceLogView()
+        }
+    }
+
+    // MARK: - Background Maintenance Section
+
+    @ViewBuilder
+    private var _backgroundMaintenanceSection: some View {
+        Section {
+            Toggle(isOn: $_optionsManager.options.backgroundMaintenanceEnabled) {
+                Label(.localized("Background Maintenance"), systemImage: "gear.arrow.2.circlepath")
+            }
+            .disabled(!_optionsManager.options.checkForUpdates || !_optionsManager.options.backgroundUpdateCheck)
+
+            if _optionsManager.options.backgroundMaintenanceEnabled
+                && _optionsManager.options.checkForUpdates
+                && _optionsManager.options.backgroundUpdateCheck {
+
+                Toggle(isOn: $_optionsManager.options.backgroundMaintenanceRequiresCharging) {
+                    Label(.localized("Require charging"), systemImage: "bolt.fill")
+                }
+
+                Picker(.localized("Interval"), selection: $_optionsManager.options.backgroundMaintenanceInterval) {
+                    Text(.localized("Every 6 hours")).tag(6)
+                    Text(.localized("Every 12 hours")).tag(12)
+                    Text(.localized("Every 24 hours")).tag(24)
+                }
+
+                Toggle(isOn: $_optionsManager.options.autoInstallAutoUpdates) {
+                    Label(.localized("Auto-install auto-updated apps"), systemImage: "square.and.arrow.down")
+                }
+
+                // Last run info
+                if let lastLog = BackgroundMaintenanceLogStore.shared.lastLog {
+                    LabeledContent(.localized("Last run")) {
+                        Text(lastLog.startedAt.formatted(date: .abbreviated, time: .shortened))
+                            .foregroundStyle(.secondary)
+                    }
+                    LabeledContent(.localized("Status")) {
+                        HStack(spacing: 4) {
+                            Image(systemName: lastLog.success ? "checkmark.circle.fill" : "xmark.circle.fill")
+                                .foregroundStyle(lastLog.success ? .green : .red)
+                            Text(lastLog.cancelled ? .localized("Cancelled") : (lastLog.success ? .localized("Success") : .localized("Failed")))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+                Button {
+                    _runMaintenanceNow()
+                } label: {
+                    HStack {
+                        if _isRunningMaintenance {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        }
+                        Text(.localized("Run now"))
+                    }
+                }
+                .disabled(_isRunningMaintenance)
+
+                NavigationLink {
+                    BackgroundMaintenanceLogView()
+                } label: {
+                    Label(.localized("View last run log"), systemImage: "doc.text")
+                }
+            }
+        } header: {
+            Text(.localized("Background Maintenance"))
+        } footer: {
+            Text(.localized("Runs full source refresh, update detection, auto-updates, stale-download cleanup, and certificate expiry checks. Requires 'Check for Updates' and 'Background Update Check' to be enabled."))
+        }
+    }
+
+    /// Trigger an immediate background maintenance run.
+    /// Submits a BGProcessingTaskRequest with earliestBeginDate = 1 second from now.
+    /// iOS may still defer it slightly, but usually runs within a few seconds.
+    private func _runMaintenanceNow() {
+        _isRunningMaintenance = true
+
+        let request = BGProcessingTaskRequest(identifier: "com.ksign.backgroundMaintenance")
+        request.earliestBeginDate = Date(timeIntervalSinceNow: 1)
+        request.requiresNetworkConnectivity = true
+        request.requiresExternalPower = false // don't require charging for manual runs
+
+        do {
+            try BGTaskScheduler.shared.submit(request)
+            Logger.misc.info("Manual background maintenance run requested")
+
+            // Also run directly for immediate feedback (the BG task will run separately)
+            BackgroundMaintenanceCoordinator.shared.run { success in
+                DispatchQueue.main.async {
+                    _isRunningMaintenance = false
+                    if success {
+                        _showMaintenanceLog = true
+                    }
+                }
+            }
+        } catch {
+            Logger.misc.error("Could not submit manual maintenance request: \(error)")
+            DispatchQueue.main.async {
+                _isRunningMaintenance = false
+                UIAlertController.showAlertWithOk(
+                    title: .localized("Error"),
+                    message: .localized("Could not start maintenance: %@", arguments: error.localizedDescription)
+                )
+            }
         }
     }
 

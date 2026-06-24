@@ -169,6 +169,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     }
     
     private func _registerBackgroundUpdateCheck() {
+        // Quick periodic update check (BGAppRefreshTask — ~30s runtime)
         BGTaskScheduler.shared.register(
             forTaskWithIdentifier: "com.ksign.updateCheck",
             using: nil
@@ -176,8 +177,17 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             self._handleBackgroundUpdateCheck(task as! BGAppRefreshTask)
         }
         _scheduleBackgroundUpdateCheck()
+
+        // Full background maintenance (BGProcessingTask — multi-minute runtime)
+        BGTaskScheduler.shared.register(
+            forTaskWithIdentifier: "com.ksign.backgroundMaintenance",
+            using: nil
+        ) { task in
+            self._handleBackgroundMaintenance(task as! BGProcessingTask)
+        }
+        _scheduleBackgroundMaintenance()
     }
-    
+
     private func _handleBackgroundUpdateCheck(_ task: BGAppRefreshTask) {
         _scheduleBackgroundUpdateCheck()
 
@@ -195,18 +205,78 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             task.setTaskCompleted(success: true)
         }
     }
-    
+
     private func _scheduleBackgroundUpdateCheck() {
         guard OptionsManager.shared.options.checkForUpdates,
               OptionsManager.shared.options.backgroundUpdateCheck else { return }
-        
+
         let request = BGAppRefreshTaskRequest(identifier: "com.ksign.updateCheck")
         request.earliestBeginDate = Date(timeIntervalSinceNow: 4 * 3600)
-        
+
         do {
             try BGTaskScheduler.shared.submit(request)
         } catch {
             print("Could not schedule background update check: \(error)")
+        }
+    }
+
+    // MARK: - Background Maintenance (BGProcessingTask)
+
+    /// Handle the full background maintenance pipeline.
+    /// Runs: source refresh → update detection → auto-update → cleanup → cert check.
+    private func _handleBackgroundMaintenance(_ task: BGProcessingTask) {
+        // Always reschedule the next run
+        _scheduleBackgroundMaintenance()
+
+        // Set up expiration — if iOS reclaims our time, clean up gracefully
+        task.expirationHandler = {
+            BackgroundMaintenanceCoordinator.shared.cancel()
+            task.setTaskCompleted(success: false)
+        }
+
+        // Guard: only run if user has it enabled
+        guard OptionsManager.shared.options.checkForUpdates,
+              OptionsManager.shared.options.backgroundUpdateCheck,
+              OptionsManager.shared.options.backgroundMaintenanceEnabled else {
+            task.setTaskCompleted(success: true)
+            return
+        }
+
+        Logger.misc.info("Background maintenance task started")
+
+        // Run the full maintenance pipeline
+        BackgroundMaintenanceCoordinator.shared.run { success in
+            DispatchQueue.main.async {
+                task.setTaskCompleted(success: success)
+            }
+        }
+    }
+
+    /// Schedule the next background maintenance run.
+    /// Uses BGProcessingTaskRequest — supports multi-minute runtime,
+    /// can require network + charging.
+    private func _scheduleBackgroundMaintenance() {
+        guard OptionsManager.shared.options.checkForUpdates,
+              OptionsManager.shared.options.backgroundUpdateCheck,
+              OptionsManager.shared.options.backgroundMaintenanceEnabled else { return }
+
+        let request = BGProcessingTaskRequest(identifier: "com.ksign.backgroundMaintenance")
+
+        // Interval (hours) — default 12
+        let intervalHours = max(6, OptionsManager.shared.options.backgroundMaintenanceInterval)
+        request.earliestBeginDate = Date(timeIntervalSinceNow: TimeInterval(intervalHours * 3600))
+
+        // Require network (for source refresh + downloads)
+        request.requiresNetworkConnectivity = true
+
+        // Require charging (configurable — heavy task)
+        request.requiresExternalPower = OptionsManager.shared.options.backgroundMaintenanceRequiresCharging
+
+        do {
+            try BGTaskScheduler.shared.submit(request)
+            Logger.misc.info("Background maintenance scheduled for +\(intervalHours)h")
+        } catch {
+            Logger.misc.error("Could not schedule background maintenance: \(error)")
         }
     }
     
