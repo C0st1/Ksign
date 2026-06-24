@@ -63,10 +63,11 @@ struct DependencyCheckSheet: View {
                         Button {
                             _addAllAutoResolvable()
                         } label: {
-                            Label(
-                                .localized("Add tweak + %lld deps", arguments: autoCount),
-                                systemImage: "plus.circle.fill"
-                            )
+                            Label {
+                                Text(verbatim: .localized("Add tweak + %lld deps", arguments: autoCount))
+                            } icon: {
+                                Image(systemName: "plus.circle.fill")
+                            }
                         }
                         .buttonStyle(.borderedProminent)
                         .disabled(autoCount == 0)
