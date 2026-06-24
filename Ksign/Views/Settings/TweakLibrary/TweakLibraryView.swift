@@ -257,6 +257,7 @@ struct TweakLibraryView: View {
 /// Shows the contents of a single user-created folder.
 struct FolderDetailView: View {
     let folder: TweakFolder
+    var options: Binding<Options>? = nil
     @StateObject private var _manager = TweakLibraryManager.shared
 
     var body: some View {
@@ -300,6 +301,27 @@ struct FolderDetailView: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
+
+            // Show toggle only in injection context
+            if let options = options {
+                let injectionPaths = Set(options.wrappedValue.injectionFiles.map { $0.path })
+                let isInjected = injectionPaths.contains(tweak.path)
+                Toggle("", isOn: Binding(
+                    get: { isInjected },
+                    set: { newValue in
+                        if newValue {
+                            if !options.wrappedValue.injectionFiles.contains(where: { $0.path == tweak.path }) {
+                                options.wrappedValue.injectionFiles.append(tweak)
+                            }
+                        } else {
+                            if let index = options.wrappedValue.injectionFiles.firstIndex(where: { $0.path == tweak.path }) {
+                                options.wrappedValue.injectionFiles.remove(at: index)
+                            }
+                        }
+                    }
+                ))
+                .labelsHidden()
+            }
         }
     }
 }
@@ -309,6 +331,7 @@ struct FolderDetailView: View {
 /// Shows the contents of a smart folder (All / Dylibs / Debs / Recent).
 struct SmartFolderDetailView: View {
     let smartFolder: SmartFolder
+    var options: Binding<Options>? = nil
     @StateObject private var _manager = TweakLibraryManager.shared
 
     var body: some View {
@@ -358,6 +381,27 @@ struct SmartFolderDetailView: View {
                 .foregroundStyle(.secondary)
             }
             Spacer()
+
+            // Show toggle only in injection context
+            if let options = options {
+                let injectionPaths = Set(options.wrappedValue.injectionFiles.map { $0.path })
+                let isInjected = injectionPaths.contains(tweak.path)
+                Toggle("", isOn: Binding(
+                    get: { isInjected },
+                    set: { newValue in
+                        if newValue {
+                            if !options.wrappedValue.injectionFiles.contains(where: { $0.path == tweak.path }) {
+                                options.wrappedValue.injectionFiles.append(tweak)
+                            }
+                        } else {
+                            if let index = options.wrappedValue.injectionFiles.firstIndex(where: { $0.path == tweak.path }) {
+                                options.wrappedValue.injectionFiles.remove(at: index)
+                            }
+                        }
+                    }
+                ))
+                .labelsHidden()
+            }
         }
     }
 }

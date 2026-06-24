@@ -347,22 +347,22 @@ struct SigningTweaksView: View {
                 }
         }
 
-        // MARK: - Available Tweaks Section (tweaks on disk NOT in injection list)
+        // MARK: - Available Tweaks Section (all tweaks on disk, toggle to inject)
 
         @ViewBuilder
         private var _availableTweaksSection: some View {
                 let manager = TweakLibraryManager.shared
-                let injectionPaths = Set(options.injectionFiles.map { $0.path })
 
-                // Available loose tweaks = in root folder, not in injection list
-                let availableLoose = _tweaksInDirectory.filter { !injectionPaths.contains($0.path) }
+                // Show ALL loose tweaks — the toggle shows whether each is injected.
+                // Don't filter out injected ones; the toggle IS the inject control.
+                let allLoose = _tweaksInDirectory
 
-                // Show if there are folders OR available loose tweaks
-                if !manager.folders.isEmpty || !availableLoose.isEmpty {
+                // Show if there are folders OR loose tweaks
+                if !manager.folders.isEmpty || !allLoose.isEmpty {
                         NBSection(.localized("Available Tweaks")) {
                                 // Smart folder shortcuts
                                 NavigationLink {
-                                        SmartFolderDetailView(smartFolder: .all)
+                                        SmartFolderDetailView(smartFolder: .all, options: $options)
                                 } label: {
                                         HStack {
                                                 Image(systemName: "square.grid.2x2.fill")
@@ -379,7 +379,7 @@ struct SigningTweaksView: View {
                                 // User folders (drill-down to pick tweaks)
                                 ForEach(manager.folders) { folder in
                                         NavigationLink {
-                                                FolderDetailView(folder: folder)
+                                                FolderDetailView(folder: folder, options: $options)
                                         } label: {
                                                 HStack {
                                                         Image(systemName: "folder.fill")
@@ -394,8 +394,8 @@ struct SigningTweaksView: View {
                                         }
                                 }
 
-                                // Available loose tweaks (toggle to inject)
-                                ForEach(availableLoose, id: \.path) { tweak in
+                                // All loose tweaks (toggle to inject/uninject)
+                                ForEach(allLoose, id: \.path) { tweak in
                                         _availableTweakRow(tweak)
                                 }
                         }
