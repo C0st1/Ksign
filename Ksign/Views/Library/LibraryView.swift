@@ -384,7 +384,11 @@ extension LibraryView {
                     UpdatePreferencesStore.shared.ignoreVersion(update.availableVersion, for: bundleId)
                     updateManager.clearUpdate(for: bundleId)
                 } label: {
-                    Label(.localized("Ignore v%@ only", arguments: update.availableVersion), systemImage: "bell.slash.fill")
+                    Label {
+                        Text(verbatim: .localized("Ignore v%@ only", arguments: update.availableVersion))
+                    } icon: {
+                        Image(systemName: "bell.slash.fill")
+                    }
                 }
 
                 // Clear preference (revert to global default)

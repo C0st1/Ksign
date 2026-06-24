@@ -146,7 +146,7 @@ struct TweakLibraryView: View {
                     Text(folder.name)
                         .font(.body)
                         .fontWeight(.medium)
-                    Text(.localized("%lld tweaks", arguments: folder.tweakCount))
+                    Text(verbatim: .localized("%lld tweaks", arguments: folder.tweakCount))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

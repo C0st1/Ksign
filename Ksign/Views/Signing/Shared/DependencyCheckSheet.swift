@@ -34,10 +34,11 @@ struct DependencyCheckSheet: View {
                                 .foregroundStyle(.green)
                                 .font(.subheadline)
                         } else {
-                            Label(
-                                .localized("%lld dependencies need attention", arguments: scanResult.unresolved.count),
-                                systemImage: "exclamationmark.triangle.fill"
-                            )
+                            Label {
+                                Text(verbatim: .localized("%lld dependencies need attention", arguments: scanResult.unresolved.count))
+                            } icon: {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                            }
                             .foregroundStyle(.orange)
                             .font(.subheadline)
                         }
