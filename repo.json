@@ -20,6 +20,15 @@
                 {
                     "downloadURL": "https://github.com/C0st1/Ksign/releases/download/beta/Ksign.ipa",
                     "size": 16281214,
+                    "version": "1.5.4",
+                    "buildVersion": "1",
+                    "date": "2026-06-24T00:00:00+03:00",
+                    "localizedDescription": "This version introduces 5 new features:\n\n- Tweak Load Order Controller: Drag-to-reorder injected tweaks with real-time validation. Detects ordering conflicts (e.g., a tweak loaded before its dependency) and offers one-tap Auto-fix via topological sort. Substrate/ElleKit/libsubstrate automatically moved to position 0.\n\n- Tweak Dependency Auto-Resolver: When importing or adding a tweak, automatically scans its Mach-O LC_LOAD_DYLIB entries and detects missing dependencies (e.g., CydiaSubstrate). Offers one-tap resolution: Inject ElleKit, Find on disk, or Skip. Re-scan button to re-check all added tweaks.\n\n- Tweak Folders: Organize tweaks into user-created folders under Documents/App/Tweaks/. Smart Folders (All Tweaks, Dylibs Only, Debs Only, Recently Added) for quick filtering. Move tweaks between folders via swipe or menu. Folder-aware injection picker with drill-down navigation.\n\n- Per-App Update Preferences: Control update behavior per app: Auto-Update (auto-download when update detected), Notify (show in updates list, default), or Ignore (hide entirely). Version-specific ignore (auto-clears when newer version appears). Global default configurable in Settings.\n\n- Background Maintenance Task: New BGProcessingTask that runs every 6/12/24 hours. 5-phase pipeline: Source Refresh, Update Detection, Auto-Update (triggers per-app auto-update downloads), Stale Download Cleanup (removes IPAs older than 30 days), Certificate Expiry Check (notifies about certs expiring within 7 days). Detailed phase-by-phase log viewer.\n\nAlso includes:\n- Fixed progress bar rendering black on light theme\n- Fixed .framework/.bundle/.appex showing as folders in Tweak Library\n- Fixed Available Tweaks conflict with Injected Tweaks section\n- Update check now fetches sources automatically if not already fetched\n- Reduced foreground update check throttle from 5 minutes to 2 minutes\n- MachOReadLinkedDylibs() read-only ObjC function for Mach-O parsing\n- 123 new localization keys",
+                    "minOSVersion": "16.0"
+                },
+                {
+                    "downloadURL": "https://github.com/C0st1/Ksign/releases/download/beta/Ksign.ipa",
+                    "size": 16281214,
                     "version": "1.5.3",
                     "buildVersion": "1",
                     "date": "2026-05-25T00:00:00+03:00",
@@ -28,8 +37,8 @@
                 }
             ],
             "appPermissions": {},
-            "version": "1.5.3",
-            "versionDate": "2026-05-25T00:00:00+03:00",
+            "version": "1.5.4",
+            "versionDate": "2026-06-24T00:00:00+03:00",
             "size": 16281214,
             "downloadURL": "https://github.com/C0st1/Ksign/releases/download/beta/Ksign.ipa"
         }

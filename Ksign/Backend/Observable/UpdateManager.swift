@@ -12,6 +12,7 @@ import CoreData
 import AltSourceKit
 import UserNotifications
 import OSLog
+import NimbleJSON
 
 /// Represents a single available update for an installed app
 struct AppUpdate: Identifiable {
@@ -40,7 +41,7 @@ final class UpdateManager: ObservableObject {
     @Published var lastCheckStatus: String? = nil
 
     /// Minimum interval between foreground checks (seconds)
-    private let _foregroundCheckInterval: TimeInterval = 300 // 5 minutes
+    private let _foregroundCheckInterval: TimeInterval = 120 // 2 minutes
     private var _lastCheckTime: Date?
     /// Previous update bundle IDs for smart notification dedup
     private var _previousUpdateBundleIDs: Set<String> = []
@@ -115,6 +116,8 @@ final class UpdateManager: ObservableObject {
 
     /// Async-safe check that avoids the DispatchQueue.main.sync deadlock.
     /// Fetches CoreData on main thread via async dispatch, then processes off-main.
+    /// If SourcesViewModel hasn't fetched source manifests yet (empty), fetches
+    /// them directly from Core Data + network before checking for updates.
     private func _performCheckAsync() {
         DispatchQueue.main.async {
             self.isChecking = true
@@ -141,10 +144,76 @@ final class UpdateManager: ObservableObject {
                 installedApps.append(contentsOf: imported)
             }
 
+            // If SourcesViewModel.sources is empty, fetch source manifests now
+            // (happens when the user hasn't opened the App Store tab yet)
+            if sources.isEmpty {
+                Logger.misc.info("UpdateManager: sources empty, fetching from Core Data + network")
+                self._fetchSourcesThenCheck(installedApps: installedApps)
+                return
+            }
+
             // Step 3: Process matching on a global queue
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
                 guard let self = self else { return }
                 self._processUpdates(installedApps: installedApps, sources: sources)
+            }
+        }
+    }
+
+    /// Fetch all AltSource manifests from network, merge into SourcesViewModel,
+    /// then run the update check. Used when SourcesViewModel.sources is empty.
+    private func _fetchSourcesThenCheck(installedApps: [AppInfoPresentable]) {
+        // Fetch AltSource entities from Core Data
+        let context = Storage.shared.context
+        let sourceRequest: NSFetchRequest<AltSource> = AltSource.fetchRequest()
+        let altSources = (try? context.fetch(sourceRequest)) ?? []
+
+        guard !altSources.isEmpty else {
+            // No sources at all — nothing to check
+            DispatchQueue.main.async {
+                self.isChecking = false
+            }
+            return
+        }
+
+        Logger.misc.info("UpdateManager: fetching \(altSources.count) source manifests")
+
+        // Fetch each source's ASRepository in parallel
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+
+            Task.detached {
+                var fetched: [AltSource: ASRepository] = [:]
+                await withTaskGroup(of: (AltSource, ASRepository?).self) { group in
+                    for source in altSources {
+                        guard let url = source.sourceURL else { continue }
+                        group.addTask {
+                            await withCheckedContinuation { continuation in
+                                NBFetchService().fetch(from: url) { (result: Result<ASRepository, Error>) in
+                                    switch result {
+                                    case .success(let repo): continuation.resume(returning: (source, repo))
+                                    case .failure:           continuation.resume(returning: (source, nil))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    for await (source, repo) in group {
+                        if let repo { fetched[source] = repo }
+                    }
+                }
+
+                // Merge into SourcesViewModel
+                await MainActor.run {
+                    SourcesViewModel.shared.sources.merge(fetched) { _, new in new }
+                    Logger.misc.info("UpdateManager: fetched \(fetched.count) source manifests")
+                }
+
+                // Now run the update check with the freshly-fetched sources
+                let sources = await MainActor.run { SourcesViewModel.shared.sources }
+                DispatchQueue.global(qos: .userInitiated).async {
+                    self._processUpdates(installedApps: installedApps, sources: sources)
+                }
             }
         }
     }

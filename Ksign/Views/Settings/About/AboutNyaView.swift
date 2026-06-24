@@ -74,19 +74,19 @@ struct AboutNyaView: View {
                 }
                 .onAppear {
                         // Show patch notes when navigating to this view if they haven't been shown before
-                        if !UserDefaults.standard.bool(forKey: "patchNotesShown_v3") {
+                        if !UserDefaults.standard.bool(forKey: "patchNotesShown_v4") {
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                                         _showPatchNotes()
-                                        UserDefaults.standard.set(true, forKey: "patchNotesShown_v3")
+                                        UserDefaults.standard.set(true, forKey: "patchNotesShown_v4")
                                 }
                         }
                 }
         }
-        
+
         private func _showPatchNotes() {
                 UIAlertController.showAlertWithOk(
             title: .localized("From C0st1, Version \(Bundle.main.version)"),
-            message: .localized("This version introduces:\n\n- Animated splash launch screen with theme sync\n- Adaptive splash for both light and dark modes\n- Accent color reflected in splash screen glow, shimmer and branding\n- Seamless storyboard-to-SwiftUI transition with zero flash\n- Update checker with badge notifications and background refresh\n- Pull-to-refresh in Library view\n- Dark theme persistence fix on app restart\n- Update All button for bulk app updates\n- Smart update deduplication across sources\n- Stale update cleanup when deleting apps\n- Patch notes viewer on About page\n- Rebranded to C0st1 with custom bundle ID (com.c0st1.ksign)\n- Removed donations, Telegram, and Discord from settings\n- Removed developer repo from default sources\n- GitHub Repository and About (GitHub profile) links in settings"),
+            message: .localized("This version introduces 5 new features:\n\n- Tweak Load Order Controller: Drag-to-reorder injected tweaks with real-time validation. Auto-fix detects ordering conflicts and moves Substrate/ElleKit to position 0.\n\n- Tweak Dependency Auto-Resolver: Scans tweak Mach-O dependencies and detects missing ones (e.g. CydiaSubstrate). One-tap Inject ElleKit resolution.\n\n- Tweak Folders: Organize tweaks into folders. Smart Folders (All, Dylibs, Debs, Recent). Move tweaks between folders. Folder-aware injection picker.\n\n- Per-App Update Preferences: Auto-Update, Notify, or Ignore per app. Version-specific ignore. Global default in Settings.\n\n- Background Maintenance: 5-phase BGProcessingTask (Source Refresh, Update Detection, Auto-Update, Stale Cleanup, Cert Expiry Check) every 6/12/24h. Detailed log viewer.\n\nAlso includes:\n- Fixed progress bar black on light theme\n- Fixed .framework/.bundle showing as folders\n- Update check now fetches sources automatically\n- MachOReadLinkedDylibs() for Mach-O parsing"),
                         isCancel: true,
                         thankYou: true
                 )
