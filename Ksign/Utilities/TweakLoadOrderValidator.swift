@@ -154,7 +154,12 @@ enum TweakLoadOrderValidator {
 
         for url in reordered {
             let bn = url.lastPathComponent.lowercased()
-            if bn.contains("cydiasubstrate") || bn.contains("ellekit") || bn.contains("libhooker") {
+            // Match all common substrate alternative names:
+            // - cydiasubstrate / substrate
+            // - ellekit
+            // - libhooker
+            // - libsubstrate (common alias for CydiaSubstrate)
+            if bn.contains("substrate") || bn.contains("ellekit") || bn.contains("libhooker") {
                 substrateProviders.append(url)
             } else {
                 remaining.append(url)
@@ -169,8 +174,16 @@ enum TweakLoadOrderValidator {
             if bn.contains("ellekit") {
                 providesMap["cydiasubstrate"] = url
                 providesMap["ellekit"] = url
+                providesMap["substrate"] = url
+                providesMap["libsubstrate"] = url
             } else if bn.contains("cydiasubstrate") {
                 providesMap["cydiasubstrate"] = url
+                providesMap["substrate"] = url
+                providesMap["libsubstrate"] = url
+            } else if bn.contains("libsubstrate") {
+                providesMap["cydiasubstrate"] = url
+                providesMap["substrate"] = url
+                providesMap["libsubstrate"] = url
             } else if bn.contains("libhooker") {
                 providesMap["libhooker"] = url
             }

@@ -377,8 +377,10 @@ struct SigningTweaksView: View {
 
                                 // Loose tweaks that are NOT already in the injection list
                                 // (avoids conflict with the "Added Tweaks" section)
+                                // Use path comparison — URL equality fails after JSON serialization
+                                let injectionPaths = Set(options.injectionFiles.map { $0.path })
                                 let availableLoose = _tweaksInDirectory.filter {
-                                        !options.injectionFiles.contains($0)
+                                        !injectionPaths.contains($0.path)
                                 }
                                 if !availableLoose.isEmpty {
                                         ForEach(availableLoose, id: \.absoluteString) { tweak in
