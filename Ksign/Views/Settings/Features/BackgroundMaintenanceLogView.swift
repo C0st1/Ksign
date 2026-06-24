@@ -56,10 +56,15 @@ struct BackgroundMaintenanceLogView: View {
                 }
             } else {
                 Section {
-                    ContentUnavailableView {
-                        Label(.localized("No maintenance runs yet"), systemImage: "clock.badge.questionmark")
-                    } description: {
+                    if #available(iOS 17, *) {
+                        ContentUnavailableView {
+                            Label(.localized("No maintenance runs yet"), systemImage: "clock.badge.questionmark")
+                        } description: {
+                            Text(.localized("Background maintenance hasn't run yet. It will run automatically based on your settings."))
+                        }
+                    } else {
                         Text(.localized("Background maintenance hasn't run yet. It will run automatically based on your settings."))
+                            .foregroundStyle(.secondary)
                     }
                 }
             }

@@ -67,7 +67,7 @@ struct SigningTweaksView: View {
                                         ContentUnavailableView {
                                                 Label(.localized("No Tweaks"), systemImage: "gear.badge.questionmark")
                                         } description: {
-                                                Text(.localized("Importing your .dylib, .deb, .framework or .appex files \n These will also be automatically added to Tweaks folder"))
+                                                Text(verbatim: .localized("Importing your .dylib, .deb, .framework or .appex files \n These will also be automatically added to Tweaks folder"))
                         } actions: {
                                                 Button {
                                                         _isAddingPresenting = true
@@ -76,7 +76,7 @@ struct SigningTweaksView: View {
                                                 }
                                         }
                                 } else {
-                                        Text(.localized("Importing your .dylib, .deb, .framework or .appex files \n These will also be automatically added to Tweaks folder"))
+                                        Text(verbatim: .localized("Importing your .dylib, .deb, .framework or .appex files \n These will also be automatically added to Tweaks folder"))
                                                 .foregroundColor(.secondary)
                                                 .frame(maxWidth: .infinity, alignment: .center)
                                                 .padding()
@@ -108,7 +108,7 @@ struct SigningTweaksView: View {
                                         if _isRescanning {
                                                 HStack {
                                                         ProgressView().scaleEffect(0.7)
-                                                        Text(.localized("Scanning..."))
+                                                        Text(verbatim: .localized("Scanning..."))
                                                 }
                                         } else {
                                                 Label(.localized("Re-scan Dependencies"), systemImage: "magnifyingglass")
@@ -175,7 +175,7 @@ struct SigningTweaksView: View {
                                 if _isValidating {
                                         HStack {
                                                 ProgressView().scaleEffect(0.8)
-                                                Text(.localized("Validating..."))
+                                                Text(verbatim: .localized("Validating..."))
                                         }
                                 } else {
                                         Label(.localized("Re-validate"), systemImage: "checkmark.shield")
@@ -208,7 +208,7 @@ struct SigningTweaksView: View {
                                         .font(.body)
                                         .lineLimit(1)
                                 if isSubstrate {
-                                        Text(.localized("Substrate"))
+                                        Text(verbatim: .localized("Substrate"))
                                                 .font(.caption2)
                                                 .foregroundStyle(.yellow)
                                 }
@@ -234,7 +234,7 @@ struct SigningTweaksView: View {
                                 HStack(spacing: 4) {
                                         Image(systemName: "xmark.octagon.fill")
                                                 .foregroundStyle(.red)
-                                        Text(.localized("%lld errors", arguments: errors.count))
+                                        Text(verbatim: .localized("%lld errors", arguments: errors.count))
                                                 .foregroundStyle(.red)
                                 }
                                 .font(.caption)
@@ -243,7 +243,7 @@ struct SigningTweaksView: View {
                                 HStack(spacing: 4) {
                                         Image(systemName: "exclamationmark.triangle.fill")
                                                 .foregroundStyle(.orange)
-                                        Text(.localized("%lld warnings", arguments: warnings.count))
+                                        Text(verbatim: .localized("%lld warnings", arguments: warnings.count))
                                                 .foregroundStyle(.orange)
                                 }
                                 .font(.caption)
@@ -347,9 +347,9 @@ struct SigningTweaksView: View {
                                 } label: {
                                         HStack {
                                                 Image(systemName: "square.grid.2x2.fill")
-                                                        .foregroundStyle(.accentColor)
+                                                        .foregroundStyle(Color.accentColor)
                                                         .frame(width: 24)
-                                                Text(.localized("All Tweaks"))
+                                                Text(verbatim: .localized("All Tweaks"))
                                                 Spacer()
                                                 Text("\(SmartFolder.all.count(in: manager.rootDirectory))")
                                                         .foregroundStyle(.secondary)
@@ -364,11 +364,11 @@ struct SigningTweaksView: View {
                                         } label: {
                                                 HStack {
                                                         Image(systemName: "folder.fill")
-                                                                .foregroundStyle(.accentColor)
+                                                                .foregroundStyle(Color.accentColor)
                                                                 .frame(width: 24)
                                                         Text(folder.name)
                                                         Spacer()
-                                                        Text(.localized("%lld", arguments: folder.tweakCount))
+                                                        Text(verbatim: .localized("%lld", arguments: folder.tweakCount))
                                                                 .foregroundStyle(.secondary)
                                                                 .font(.caption)
                                                 }
@@ -536,7 +536,7 @@ extension SigningTweaksView {
         private func _file(tweak: URL, isFromOptions: Bool) -> some View {
                 HStack(spacing: 10) {
                         Image(systemName: TweakFile.icon(for: tweak.pathExtension))
-                                .foregroundStyle(.accentColor)
+                                .foregroundStyle(Color.accentColor)
                                 .frame(width: 24)
 
                         Text(tweak.lastPathComponent)
@@ -612,7 +612,7 @@ struct TweakInjectionPickerView: View {
                                                 } label: {
                                                         HStack {
                                                                 Image(systemName: smart.iconName)
-                                                                        .foregroundStyle(.accentColor)
+                                                                        .foregroundStyle(Color.accentColor)
                                                                         .frame(width: 24)
                                                                 Text(smart.localizedDisplayName)
                                                                 Spacer()
@@ -633,7 +633,7 @@ struct TweakInjectionPickerView: View {
                                                         } label: {
                                                                 HStack {
                                                                         Image(systemName: "folder.fill")
-                                                                                .foregroundStyle(.accentColor)
+                                                                                .foregroundStyle(Color.accentColor)
                                                                                 .frame(width: 24)
                                                                         Text(folder.name)
                                                                         Spacer()
@@ -662,8 +662,10 @@ struct TweakInjectionPickerView: View {
                                         }
                                 }
                                 ToolbarItem(placement: .topBarTrailing) {
-                                        Button(.localized("Add %lld", arguments: _selectedTweaks.count)) {
+                                        Button {
                                                 _addSelected()
+                                        } label: {
+                                                Text(verbatim: .localized("Add %lld", arguments: _selectedTweaks.count))
                                         }
                                         .disabled(_selectedTweaks.isEmpty)
                                 }
@@ -676,7 +678,7 @@ struct TweakInjectionPickerView: View {
         private func _toggleRow(_ tweak: URL) -> some View {
                 HStack(spacing: 10) {
                         Image(systemName: TweakFile.icon(for: tweak.pathExtension))
-                                .foregroundStyle(.accentColor)
+                                .foregroundStyle(Color.accentColor)
                                 .frame(width: 24)
                         Text(tweak.lastPathComponent)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -713,7 +715,7 @@ struct FolderPickerView: View {
                         let tweaks = folder.tweaks
                         if tweaks.isEmpty {
                                 Section {
-                                        Text(.localized("This folder is empty."))
+                                        Text(verbatim: .localized("This folder is empty."))
                                                 .foregroundStyle(.secondary)
                                 }
                         } else {
@@ -732,7 +734,7 @@ struct FolderPickerView: View {
         private func _toggleRow(_ tweak: URL) -> some View {
                 HStack(spacing: 10) {
                         Image(systemName: TweakFile.icon(for: tweak.pathExtension))
-                                .foregroundStyle(.accentColor)
+                                .foregroundStyle(Color.accentColor)
                                 .frame(width: 24)
                         Text(tweak.lastPathComponent)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -760,7 +762,7 @@ struct SmartFolderPickerView: View {
                         let tweaks = smartFolder.tweaks(in: _manager.rootDirectory)
                         if tweaks.isEmpty {
                                 Section {
-                                        Text(.localized("No tweaks match this filter."))
+                                        Text(verbatim: .localized("No tweaks match this filter."))
                                                 .foregroundStyle(.secondary)
                                 }
                         } else {
@@ -780,7 +782,7 @@ struct SmartFolderPickerView: View {
         private func _toggleRow(_ tweak: URL) -> some View {
                 HStack(spacing: 10) {
                         Image(systemName: TweakFile.icon(for: tweak.pathExtension))
-                                .foregroundStyle(.accentColor)
+                                .foregroundStyle(Color.accentColor)
                                 .frame(width: 24)
                         VStack(alignment: .leading, spacing: 2) {
                                 Text(tweak.lastPathComponent)

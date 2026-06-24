@@ -27,7 +27,7 @@ struct DependencyCheckSheet: View {
                 // Header section
                 Section {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(.localized("Adding: %@", arguments: tweakName))
+                        Text(verbatim: .localized("Adding: %@", arguments: tweakName))
                             .font(.headline)
                         if scanResult.unresolved.isEmpty {
                             Label(.localized("All dependencies satisfied"), systemImage: "checkmark.circle.fill")
@@ -76,14 +76,14 @@ struct DependencyCheckSheet: View {
                         _ignoreAllMissing()
                         _dismiss()
                     } label: {
-                        Text(.localized("Add tweak only"))
+                        Text(verbatim: .localized("Add tweak only"))
                     }
 
                     // Cancel
                     Button(role: .cancel) {
                         _dismiss()
                     } label: {
-                        Text(.localized("Cancel"))
+                        Text(verbatim: .localized("Cancel"))
                     }
                 }
             }

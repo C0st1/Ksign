@@ -123,7 +123,11 @@ extension LibraryInfoView {
                                         Button {
                                                 UpdatePreferencesStore.shared.ignoreVersion(avail, for: bundleId)
                                         } label: {
-                                                Label(.localized("Ignore v%@ only", arguments: avail), systemImage: "bell.slash.fill")
+                                                Label {
+                                                    Text(verbatim: .localized("Ignore v%@ only", arguments: avail))
+                                                } icon: {
+                                                    Image(systemName: "bell.slash.fill")
+                                                }
                                         }
                                 }
 

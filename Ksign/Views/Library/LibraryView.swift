@@ -369,7 +369,7 @@ extension LibraryView {
                     Button {
                         UpdatePreferencesStore.shared.set(pref, for: bundleId)
                         // If we just set it to ignore, force a re-check so the row disappears
-                        if pref == .ignore {
+                        if pref == AppUpdatePreference.ignore {
                             updateManager.clearUpdate(for: bundleId)
                         }
                     } label: {
@@ -399,7 +399,7 @@ extension LibraryView {
         } label: {
             Image(systemName: "ellipsis.circle")
                 .font(.body)
-                .foregroundStyle(currentPref == .ignore ? .red : (currentPref == .autoUpdate ? .green : .secondary))
+                .foregroundStyle(currentPref == AppUpdatePreference.ignore ? .red : (currentPref == .autoUpdate ? .green : .secondary))
         }
         .buttonStyle(.borderless)
     }

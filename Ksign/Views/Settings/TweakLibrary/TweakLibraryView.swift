@@ -31,7 +31,7 @@ struct TweakLibraryView: View {
                     } label: {
                         HStack {
                             Image(systemName: smart.iconName)
-                                .foregroundStyle(.accentColor)
+                                .foregroundStyle(Color.accentColor)
                                 .frame(width: 24)
                             Text(smart.localizedDisplayName)
                             Spacer()
@@ -138,7 +138,7 @@ struct TweakLibraryView: View {
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: "folder.fill")
-                    .foregroundStyle(.accentColor)
+                    .foregroundStyle(Color.accentColor)
                     .font(.title3)
                     .frame(width: 28)
 
@@ -178,7 +178,7 @@ struct TweakLibraryView: View {
     private func _tweakRow(_ tweak: URL, parentFolder: TweakFolder?) -> some View {
         HStack(spacing: 12) {
             Image(systemName: TweakFile.icon(for: tweak.pathExtension))
-                .foregroundStyle(.accentColor)
+                .foregroundStyle(Color.accentColor)
                 .frame(width: 28)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -290,7 +290,7 @@ struct FolderDetailView: View {
     private func _tweakRow(_ tweak: URL) -> some View {
         HStack(spacing: 12) {
             Image(systemName: TweakFile.icon(for: tweak.pathExtension))
-                .foregroundStyle(.accentColor)
+                .foregroundStyle(Color.accentColor)
                 .frame(width: 28)
             VStack(alignment: .leading, spacing: 2) {
                 Text(tweak.lastPathComponent)
@@ -342,7 +342,7 @@ struct SmartFolderDetailView: View {
     private func _tweakRow(_ tweak: URL) -> some View {
         HStack(spacing: 12) {
             Image(systemName: TweakFile.icon(for: tweak.pathExtension))
-                .foregroundStyle(.accentColor)
+                .foregroundStyle(Color.accentColor)
                 .frame(width: 28)
             VStack(alignment: .leading, spacing: 2) {
                 Text(tweak.lastPathComponent)

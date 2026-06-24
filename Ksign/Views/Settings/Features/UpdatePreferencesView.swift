@@ -50,7 +50,7 @@ struct UpdatePreferencesView: View {
 
     private var _ignoredApps: [(bundleId: String, app: AppInfoPresentable?, setAt: Date, ignoredVersion: String?)] {
         _store.allPreferences()
-            .filter { $0.preference == .ignore }
+            .filter { $0.preference == AppUpdatePreference.ignore }
             .compactMap { entry in
                 let app = _allApps.first { $0.identifier == entry.bundleId }
                 return (entry.bundleId, app, entry.setAt, entry.ignoredVersion)
@@ -70,7 +70,7 @@ struct UpdatePreferencesView: View {
                     }
                 }
             } footer: {
-                Text(.localized("Apps without a specific preference will use this default."))
+                Text(verbatim: .localized("Apps without a specific preference will use this default."))
             }
             .onChange(of: _optionsManager.options.defaultUpdatePreference) { _ in
                 _optionsManager.saveOptions()
@@ -149,7 +149,7 @@ struct UpdatePreferencesView: View {
             Section {
                 EmptyView()
             } footer: {
-                Text(.localized("Per-app update preferences override the global default. Tap any app to change its preference."))
+                Text(verbatim: .localized("Per-app update preferences override the global default. Tap any app to change its preference."))
             }
         }
         .toolbar {
@@ -201,11 +201,11 @@ struct UpdatePreferencesView: View {
 
                     HStack(spacing: 4) {
                         if let ignoredVersion = ignoredVersion {
-                            Text(.localized("Ignored v%@", arguments: ignoredVersion))
+                            Text(verbatim: .localized("Ignored v%@", arguments: ignoredVersion))
                                 .font(.caption)
                                 .foregroundStyle(.red)
                         } else {
-                            Text(.localized("Set %@", arguments: setAt.formatted(date: .abbreviated, time: .omitted)))
+                            Text(verbatim: .localized("Set %@", arguments: setAt.formatted(date: .abbreviated, time: .omitted)))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }

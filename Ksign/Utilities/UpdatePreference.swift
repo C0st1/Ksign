@@ -22,6 +22,10 @@ enum AppUpdatePreference: String, Codable, CaseIterable {
     /// Show the update in the updates list, but don't auto-download. (default)
     case notify = "Notify"
     /// Never show updates for this app (or for a specific version only).
+<<<<<<< HEAD
+=======
+    case ignore = "Ignore"
+>>>>>>> 5e8121a (Add 5 features + fix iOS 26 SDK build errors)
 
     var displayName: String {
         switch self {
@@ -136,7 +140,11 @@ final class UpdatePreferencesStore: ObservableObject {
     /// Check if a specific version is explicitly ignored for a bundle ID.
     func isVersionIgnored(_ version: String, for bundleId: String) -> Bool {
         guard let entry = _entry(for: bundleId) else { return false }
+<<<<<<< HEAD
         return entry.preference == .ignore && entry.ignoredVersion == version
+=======
+        return entry.preference == AppUpdatePreference.ignore && entry.ignoredVersion == version
+>>>>>>> 5e8121a (Add 5 features + fix iOS 26 SDK build errors)
     }
 
     /// Get the ignored version string (if any) for a bundle ID.
@@ -163,7 +171,11 @@ final class UpdatePreferencesStore: ObservableObject {
     /// Bulk: clear all ignored entries (un-ignore everything).
     func clearAllIgnored() {
         _queue.sync {
+<<<<<<< HEAD
             entries = entries.filter { _, entry in entry.preference != .ignore }
+=======
+            entries = entries.filter { _, entry in entry.preference != AppUpdatePreference.ignore }
+>>>>>>> 5e8121a (Add 5 features + fix iOS 26 SDK build errors)
             _persist()
         }
         DispatchQueue.main.async { self.objectWillChange.send() }
