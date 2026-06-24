@@ -20,6 +20,7 @@ struct TweakLibraryView: View {
     @State private var _renameText = ""
     @State private var _movingTweak: URL?
     @State private var _selectedTweakForInfo: URL?
+    @State private var _showImportTweaks = false
 
     var body: some View {
         NBList(.localized("Tweak Library"), displayMode: .inline) {
@@ -76,9 +77,9 @@ struct TweakLibraryView: View {
                             Text(.localized("Import .dylib, .deb, .framework, or .appex files to get started. They'll appear here."))
                         } actions: {
                             Button {
-                                _showCreateFolder = true
+                                _showImportTweaks = true
                             } label: {
-                                Text(.localized("Create Folder")).bg()
+                                Text(.localized("Import Tweaks")).bg()
                             }
                         }
                     }
@@ -92,12 +93,26 @@ struct TweakLibraryView: View {
                 placement: .topBarTrailing
             ) {
                 Button {
+                    _showImportTweaks = true
+                } label: {
+                    Label(.localized("Import Tweaks"), systemImage: "tray.and.arrow.down")
+                }
+                Button {
                     _showCreateFolder = true
                 } label: {
                     Label(.localized("New Folder"), systemImage: "folder.badge.plus")
                 }
             }
             NBToolbarButton(role: .close)
+        }
+        .sheet(isPresented: $_showImportTweaks) {
+            FileImporterRepresentableView(
+                allowedContentTypes: [.item],
+                allowsMultipleSelection: true,
+                onDocumentsPicked: { urls in
+                    _importTweaks(urls: urls)
+                }
+            )
         }
         .alert(.localized("New Folder"), isPresented: $_showCreateFolder) {
             TextField(.localized("Folder name"), text: $_newFolderName)
@@ -221,6 +236,38 @@ struct TweakLibraryView: View {
 
     // MARK: - Actions
 
+    /// Import tweak files from the file picker into the tweaks root folder.
+    private func _importTweaks(urls: [URL]) {
+        guard !urls.isEmpty else { return }
+        let tweaksDir = FileManager.default.tweaks
+
+        do {
+            try FileManager.default.createDirectoryIfNeeded(at: tweaksDir)
+        } catch {
+            print("Error creating tweaks directory: \(error)")
+            return
+        }
+
+        let allowedExtensions = Set(["dylib", "deb", "framework", "bundle", "appex"])
+
+        for url in urls {
+            let ext = url.pathExtension.lowercased()
+            guard allowedExtensions.contains(ext) else { continue }
+
+            let destinationURL = tweaksDir.appendingPathComponent(url.lastPathComponent)
+            do {
+                if FileManager.default.fileExists(atPath: destinationURL.path) {
+                    try FileManager.default.removeItem(at: destinationURL)
+                }
+                try FileManager.default.copyItem(at: url, to: destinationURL)
+            } catch {
+                print("Error copying tweak file: \(error)")
+            }
+        }
+
+        _manager.refresh()
+    }
+
     private func _createFolder() {
         let name = _newFolderName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else { return }
@@ -259,6 +306,7 @@ struct FolderDetailView: View {
     let folder: TweakFolder
     var options: Binding<Options>? = nil
     @StateObject private var _manager = TweakLibraryManager.shared
+    @State private var _showImportTweaks = false
 
     var body: some View {
         NBList(folder.name, displayMode: .inline) {
@@ -269,7 +317,19 @@ struct FolderDetailView: View {
                         ContentUnavailableView {
                             Label(.localized("Empty Folder"), systemImage: "folder")
                         } description: {
-                            Text(.localized("This folder has no tweaks. Move tweaks here from the library."))
+                            Text(.localized("Import tweaks directly into this folder, or move existing tweaks here from the library."))
+                        } actions: {
+                            Button {
+                                _showImportTweaks = true
+                            } label: {
+                                Text(.localized("Import Tweaks")).bg()
+                            }
+                        }
+                    } else {
+                        Button {
+                            _showImportTweaks = true
+                        } label: {
+                            Label(.localized("Import Tweaks"), systemImage: "tray.and.arrow.down")
                         }
                     }
                 }
@@ -284,7 +344,39 @@ struct FolderDetailView: View {
         .toolbar {
             NBToolbarButton(role: .close)
         }
+        .sheet(isPresented: $_showImportTweaks) {
+            FileImporterRepresentableView(
+                allowedContentTypes: [.item],
+                allowsMultipleSelection: true,
+                onDocumentsPicked: { urls in
+                    _importTweaksIntoFolder(urls: urls)
+                }
+            )
+        }
         .onAppear { _manager.refresh() }
+    }
+
+    /// Import tweak files directly into this folder.
+    private func _importTweaksIntoFolder(urls: [URL]) {
+        guard !urls.isEmpty else { return }
+        let allowedExtensions = Set(["dylib", "deb", "framework", "bundle", "appex"])
+
+        for url in urls {
+            let ext = url.pathExtension.lowercased()
+            guard allowedExtensions.contains(ext) else { continue }
+
+            let destinationURL = folder.url.appendingPathComponent(url.lastPathComponent)
+            do {
+                if FileManager.default.fileExists(atPath: destinationURL.path) {
+                    try FileManager.default.removeItem(at: destinationURL)
+                }
+                try FileManager.default.copyItem(at: url, to: destinationURL)
+            } catch {
+                print("Error copying tweak file: \(error)")
+            }
+        }
+
+        _manager.refresh()
     }
 
     @ViewBuilder

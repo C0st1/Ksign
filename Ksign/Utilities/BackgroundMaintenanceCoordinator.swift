@@ -96,6 +96,9 @@ final class BackgroundMaintenanceCoordinator {
     // MARK: - Phase 1: Source Refresh
 
     /// Re-fetch every AltSource's ASRepository.
+    /// Reads AltSource entities directly from Core Data (not from
+    /// SourcesViewModel.shared.sources, which may be empty if the user
+    /// hasn't opened the App Store tab yet).
     private func _refreshSources(log: inout BackgroundMaintenanceLog) async -> Bool {
         let phaseStart = Date()
         var phase = BackgroundMaintenanceLog.PhaseLog(
@@ -103,8 +106,20 @@ final class BackgroundMaintenanceCoordinator {
             startedAt: phaseStart
         )
 
-        let sources = await MainActor.run {
-            Array(SourcesViewModel.shared.sources.keys)
+        // Fetch AltSource entities directly from Core Data
+        let sources: [AltSource] = await MainActor.run {
+            let context = Storage.shared.context
+            let request: NSFetchRequest<AltSource> = AltSource.fetchRequest()
+            return (try? context.fetch(request)) ?? []
+        }
+
+        guard !sources.isEmpty else {
+            phase.finishedAt = Date()
+            phase.details = .localized("No sources to refresh")
+            phase.success = true
+            log.phases.append(phase)
+            Logger.misc.info("Background maintenance phase 1: no sources")
+            return true
         }
 
         var successCount = 0
@@ -138,7 +153,8 @@ final class BackgroundMaintenanceCoordinator {
                 }
             }
 
-            // Merge refreshed results into SourcesViewModel
+            // Merge refreshed results into SourcesViewModel so UpdateManager
+            // (phase 2) can see them
             await MainActor.run {
                 SourcesViewModel.shared.sources.merge(refreshed) { _, new in new }
             }

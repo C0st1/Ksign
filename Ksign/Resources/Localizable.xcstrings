@@ -14740,6 +14740,28 @@
           }
         }
       }
+    },
+    "Import tweaks directly into this folder, or move existing tweaks here from the library.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import tweaks directly into this folder, or move existing tweaks here from the library."
+          }
+        }
+      }
+    },
+    "No sources to refresh": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No sources to refresh"
+          }
+        }
+      }
     }
   },
   "version": "1.1"
