@@ -445,6 +445,13 @@ struct FolderDetailView: View {
     @State private var _showImportTweaks = false
     @State private var _movingTweak: URL?
 
+    // Multi-select state (only used in library browsing context, not injection)
+    @State private var _isEditMode: EditMode = .inactive
+    @State private var _selectedTweaks: Set<String> = []
+
+    /// Whether we're in injection context (options binding present)
+    private var _isInjectionContext: Bool { options != nil }
+
     var body: some View {
         NBList(folder.name, displayMode: .inline) {
             let tweaks = folder.tweaks
@@ -479,18 +486,53 @@ struct FolderDetailView: View {
             }
         }
         .toolbar {
-            NBToolbarMenu(
-                systemImage: "plus",
-                style: .icon,
-                placement: .topBarTrailing
-            ) {
-                Button {
-                    _showImportTweaks = true
-                } label: {
-                    Label(.localized("Import Tweaks"), systemImage: "tray.and.arrow.down")
+            if _isEditMode.isEditing && !_isInjectionContext {
+                // Edit mode toolbar: bulk actions
+                ToolbarItem(placement: .topBarLeading) {
+                    Button(.localized("Done")) {
+                        withAnimation(.snappy) {
+                            _isEditMode = .inactive
+                            _selectedTweaks.removeAll()
+                        }
+                    }
                 }
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    if !_selectedTweaks.isEmpty {
+                        Text(verbatim: "\(_selectedTweaks.count)")
+                            .font(.headline)
+                            .foregroundStyle(.secondary)
+
+                        Menu {
+                            Button {
+                                _bulkMoveSelected()
+                            } label: {
+                                Label(.localized("Move Selected"), systemImage: "folder")
+                            }
+                            Button(role: .destructive) {
+                                _bulkDeleteSelected()
+                            } label: {
+                                Label(.localized("Delete Selected"), systemImage: "trash")
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                        }
+                    }
+                }
+            } else {
+                // Normal toolbar
+                NBToolbarMenu(
+                    systemImage: "plus",
+                    style: .icon,
+                    placement: .topBarTrailing
+                ) {
+                    Button {
+                        _showImportTweaks = true
+                    } label: {
+                        Label(.localized("Import Tweaks"), systemImage: "tray.and.arrow.down")
+                    }
+                }
+                NBToolbarButton(role: .close)
             }
-            NBToolbarButton(role: .close)
         }
         .sheet(isPresented: $_showImportTweaks) {
             FileImporterRepresentableView(
@@ -530,12 +572,58 @@ struct FolderDetailView: View {
         _manager.refresh()
     }
 
+    /// Bulk delete all selected tweaks.
+    private func _bulkDeleteSelected() {
+        let selected = _selectedTweaks
+        UIAlertController.showAlert(
+            title: .localized("Delete %lld Tweaks", arguments: selected.count),
+            message: .localized("Are you sure you want to delete these tweaks? This cannot be undone."),
+            actions: [
+                UIAlertAction(title: .localized("Cancel"), style: .cancel),
+                UIAlertAction(title: .localized("Delete"), style: .destructive) { _ in
+                    for path in selected {
+                        let url = URL(fileURLWithPath: path)
+                        try? self._manager.deleteTweak(url)
+                    }
+                    withAnimation(.snappy) {
+                        self._isEditMode = .inactive
+                        self._selectedTweaks.removeAll()
+                    }
+                }
+            ]
+        )
+    }
+
+    /// Bulk move all selected tweaks to root.
+    private func _bulkMoveSelected() {
+        guard !_selectedTweaks.isEmpty else { return }
+        let selected = _selectedTweaks
+        for path in selected {
+            let url = URL(fileURLWithPath: path)
+            try? _manager.moveTweakToRoot(url)
+        }
+        withAnimation(.snappy) {
+            _isEditMode = .inactive
+            _selectedTweaks.removeAll()
+        }
+    }
+
     @ViewBuilder
     private func _tweakRow(_ tweak: URL) -> some View {
+        let isSelected = _selectedTweaks.contains(tweak.path)
+
         HStack(spacing: 12) {
-            Image(systemName: TweakFile.icon(for: tweak.pathExtension))
-                .foregroundStyle(Color.accentColor)
-                .frame(width: 28)
+            // In edit mode (library context): show checkmark circle
+            if _isEditMode.isEditing && !_isInjectionContext {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(isSelected ? Color.accentColor : .secondary)
+                    .frame(width: 28)
+            } else {
+                Image(systemName: TweakFile.icon(for: tweak.pathExtension))
+                    .foregroundStyle(Color.accentColor)
+                    .frame(width: 28)
+            }
+
             VStack(alignment: .leading, spacing: 2) {
                 Text(tweak.lastPathComponent)
                     .font(.body)
@@ -546,7 +634,7 @@ struct FolderDetailView: View {
             Spacer()
 
             // Show toggle only in injection context
-            if let options = options {
+            if _isInjectionContext, let options = options {
                 let injectionPaths = Set(options.wrappedValue.injectionFiles.map { $0.path })
                 let isInjected = injectionPaths.contains(tweak.path)
                 Toggle("", isOn: Binding(
@@ -564,10 +652,8 @@ struct FolderDetailView: View {
                     }
                 ))
                 .labelsHidden()
-            }
-
-            // Menu with Move + Delete (for Tweak Library browsing context)
-            if options == nil {
+            } else if !_isEditMode.isEditing {
+                // Menu with Move + Delete (for Tweak Library browsing context)
                 Menu {
                     Button {
                         _movingTweak = tweak
@@ -592,19 +678,49 @@ struct FolderDetailView: View {
                 .buttonStyle(.borderless)
             }
         }
-        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-            Button(role: .destructive) {
-                try? _manager.deleteTweak(tweak)
-            } label: {
-                Label(.localized("Delete"), systemImage: "trash")
+        // Long-press to enter edit mode (library context only)
+        .onLongPressGesture {
+            guard !_isInjectionContext else { return }
+            withAnimation(.snappy) {
+                _isEditMode = .active
+                _selectedTweaks.insert(tweak.path)
             }
-            if options == nil {
-                Button {
-                    _movingTweak = tweak
-                } label: {
-                    Label(.localized("Move"), systemImage: "folder")
+            let haptic = UIImpactFeedbackGenerator(style: .medium)
+            haptic.impactOccurred()
+        }
+        // In edit mode: tap to toggle selection
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if _isEditMode.isEditing && !_isInjectionContext {
+                withAnimation(.snappy) {
+                    if _selectedTweaks.contains(tweak.path) {
+                        _selectedTweaks.remove(tweak.path)
+                    } else {
+                        _selectedTweaks.insert(tweak.path)
+                    }
                 }
-                .tint(.accentColor)
+                if _selectedTweaks.isEmpty {
+                    withAnimation(.snappy) {
+                        _isEditMode = .inactive
+                    }
+                }
+            }
+        }
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            if !_isEditMode.isEditing {
+                Button(role: .destructive) {
+                    try? _manager.deleteTweak(tweak)
+                } label: {
+                    Label(.localized("Delete"), systemImage: "trash")
+                }
+                if !_isInjectionContext {
+                    Button {
+                        _movingTweak = tweak
+                    } label: {
+                        Label(.localized("Move"), systemImage: "folder")
+                    }
+                    .tint(.accentColor)
+                }
             }
         }
     }
