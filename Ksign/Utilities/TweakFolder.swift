@@ -178,9 +178,10 @@ enum SmartFolder: String, CaseIterable, Identifiable {
             includingPropertiesForKeys: [.isRegularFileKey, .isDirectoryKey, .contentModificationDateKey],
             options: [.skipsHiddenFiles]
         )
-        enumerator?.forEach { case let url as URL in
+        guard let enumerator = enumerator else { return results }
+        for case let url as URL in enumerator {
             let ext = url.pathExtension.lowercased()
-            guard TweakFile.isTweak(ext) else { return }
+            guard TweakFile.isTweak(ext) else { continue }
             // For .framework and .bundle, the URL IS the directory — include it
             if ext == "framework" || ext == "bundle" {
                 results.append(url)
