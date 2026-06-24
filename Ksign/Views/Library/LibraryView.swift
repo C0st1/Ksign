@@ -365,7 +365,7 @@ extension LibraryView {
 
         Menu {
             Section(.localized("Update Preference")) {
-                ForEach(UpdatePreference.allCases, id: \.rawValue) { pref in
+                ForEach(AppUpdatePreference.allCases, id: \.rawValue) { pref in
                     Button {
                         UpdatePreferencesStore.shared.set(pref, for: bundleId)
                         // If we just set it to ignore, force a re-check so the row disappears
@@ -405,9 +405,9 @@ extension LibraryView {
     }
 
     /// Read the global default preference (for comparison in the menu).
-    private func _globalDefaultPreference() -> UpdatePreference {
+    private func _globalDefaultPreference() -> AppUpdatePreference {
         let raw = OptionsManager.shared.options.defaultUpdatePreference
-        return UpdatePreference(rawValue: raw) ?? .notify
+        return AppUpdatePreference(rawValue: raw) ?? .notify
     }
 }
 

@@ -109,7 +109,7 @@ extension LibraryInfoView {
                 NBSection(.localized("Updates")) {
                         // Current preference (tappable to change)
                         Menu {
-                                ForEach(UpdatePreference.allCases, id: \.rawValue) { pref in
+                                ForEach(AppUpdatePreference.allCases, id: \.rawValue) { pref in
                                         Button {
                                                 UpdatePreferencesStore.shared.set(pref, for: bundleId)
                                         } label: {
@@ -165,9 +165,9 @@ extension LibraryInfoView {
         }
 
         /// Read the global default preference.
-        private func _globalDefaultPreference() -> UpdatePreference {
+        private func _globalDefaultPreference() -> AppUpdatePreference {
                 let raw = OptionsManager.shared.options.defaultUpdatePreference
-                return UpdatePreference(rawValue: raw) ?? .notify
+                return AppUpdatePreference(rawValue: raw) ?? .notify
         }
         
         @ViewBuilder

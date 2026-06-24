@@ -11,6 +11,7 @@ import SwiftUI
 import CoreData
 import AltSourceKit
 import UserNotifications
+import OSLog
 
 /// Represents a single available update for an installed app
 struct AppUpdate: Identifiable {
@@ -288,7 +289,7 @@ final class UpdateManager: ObservableObject {
 
     /// Route an update to the appropriate bucket based on the per-app preference.
     private func _handleUpdate(
-        preference: UpdatePreference,
+        preference: AppUpdatePreference,
         installed: AppInfoPresentable,
         sourceApp: ASRepository.App,
         sourceURL: URL,

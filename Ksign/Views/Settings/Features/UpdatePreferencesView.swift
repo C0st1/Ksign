@@ -64,7 +64,7 @@ struct UpdatePreferencesView: View {
             // Default preference section
             Section {
                 Picker(.localized("Default for new apps"), selection: $_optionsManager.options.defaultUpdatePreference) {
-                    ForEach(UpdatePreference.allCases, id: \.rawValue) { pref in
+                    ForEach(AppUpdatePreference.allCases, id: \.rawValue) { pref in
                         Label(pref.displayName, systemImage: pref.iconName)
                             .tag(pref.rawValue)
                     }
@@ -163,12 +163,12 @@ struct UpdatePreferencesView: View {
     private func _appRow(
         bundleId: String,
         app: AppInfoPresentable?,
-        preference: UpdatePreference,
+        preference: AppUpdatePreference,
         setAt: Date,
         ignoredVersion: String?
     ) -> some View {
         Menu {
-            ForEach(UpdatePreference.allCases, id: \.rawValue) { pref in
+            ForEach(AppUpdatePreference.allCases, id: \.rawValue) { pref in
                 Button {
                     _store.set(pref, for: bundleId)
                 } label: {

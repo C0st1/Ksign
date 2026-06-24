@@ -16,6 +16,8 @@ import Foundation
 import CoreData
 import AltSourceKit
 import UserNotifications
+import OSLog
+import NimbleJSON
 
 /// Coordinator for the background maintenance pipeline.
 /// Runs as a detached Task; cancellable via cancel().

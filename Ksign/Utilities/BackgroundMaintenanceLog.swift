@@ -18,9 +18,9 @@ struct BackgroundMaintenanceLog: Codable, Equatable {
         let id: UUID
         let name: String           // "Source Refresh", "Update Detection", etc.
         let startedAt: Date
-        let finishedAt: Date?
-        let details: String        // "Refreshed 7 sources, 2 failed"
-        let success: Bool
+        var finishedAt: Date?      // mutated after the phase completes
+        var details: String        // mutated after the phase completes
+        var success: Bool          // mutated after the phase completes
 
         init(name: String, startedAt: Date, finishedAt: Date? = nil, details: String = "", success: Bool = true) {
             self.id = UUID()

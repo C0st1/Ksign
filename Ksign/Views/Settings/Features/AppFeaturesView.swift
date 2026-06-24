@@ -9,6 +9,7 @@ import SwiftUI
 import NimbleViews
 import UserNotifications
 import BackgroundTasks
+import OSLog
 
 struct AppFeaturesView: View {
     @StateObject private var _optionsManager = OptionsManager.shared

@@ -1,5 +1,5 @@
 //
-//  UpdatePreference.swift
+//  AppUpdatePreference.swift
 //  Ksign
 //
 //  Per-App Update Preferences — allows users to control update behavior
@@ -11,10 +11,12 @@
 import Foundation
 import SwiftUI
 
-// MARK: - UpdatePreference Enum
+// MARK: - AppUpdatePreference Enum
 
 /// Per-app update behavior preference.
-enum UpdatePreference: String, Codable, CaseIterable {
+/// Named `AppUpdatePreference` (not `UpdatePreference`) to avoid a name
+/// collision with a type in the iOS 26 PencilKit SDK.
+enum AppUpdatePreference: String, Codable, CaseIterable {
     /// Automatically download updates when detected (and optionally auto-install).
     case autoUpdate = "Auto-Update"
     /// Show the update in the updates list, but don't auto-download. (default)
@@ -60,7 +62,7 @@ final class UpdatePreferencesStore: ObservableObject {
     /// A single preference entry for one bundle ID.
     struct Entry: Codable, Equatable {
         let bundleId: String
-        let preference: UpdatePreference
+        let preference: AppUpdatePreference
         let setAt: Date
         /// If non-nil, the ignore applies only to this specific version.
         /// A different version will reset the preference to the default.
@@ -86,7 +88,7 @@ final class UpdatePreferencesStore: ObservableObject {
 
     /// Get the preference for a bundle ID.
     /// Falls back to the global default if no per-app entry exists.
-    func preference(for bundleId: String) -> UpdatePreference {
+    func preference(for bundleId: String) -> AppUpdatePreference {
         if let entry = _entry(for: bundleId) {
             // If this is an "ignore this version only" entry, check if the
             // ignored version is still the latest. If a newer version exists,
@@ -100,7 +102,7 @@ final class UpdatePreferencesStore: ObservableObject {
     }
 
     /// Set a permanent preference (applies to all future versions).
-    func set(_ preference: UpdatePreference, for bundleId: String) {
+    func set(_ preference: AppUpdatePreference, for bundleId: String) {
         let entry = Entry(
             bundleId: bundleId,
             preference: preference,
@@ -143,7 +145,7 @@ final class UpdatePreferencesStore: ObservableObject {
     }
 
     /// All preferences as a sorted list (most recently set first).
-    func allPreferences() -> [(bundleId: String, preference: UpdatePreference, setAt: Date, ignoredVersion: String?)] {
+    func allPreferences() -> [(bundleId: String, preference: AppUpdatePreference, setAt: Date, ignoredVersion: String?)] {
         entries.values
             .sorted { $0.setAt > $1.setAt }
             .map { ($0.bundleId, $0.preference, $0.setAt, $0.ignoredVersion) }
@@ -181,9 +183,9 @@ final class UpdatePreferencesStore: ObservableObject {
         DispatchQueue.main.async { self.objectWillChange.send() }
     }
 
-    private func _globalDefault() -> UpdatePreference {
+    private func _globalDefault() -> AppUpdatePreference {
         let raw = OptionsManager.shared.options.defaultUpdatePreference
-        return UpdatePreference(rawValue: raw) ?? .notify
+        return AppUpdatePreference(rawValue: raw) ?? .notify
     }
 
     private func _loadEntries() -> [String: Entry] {
