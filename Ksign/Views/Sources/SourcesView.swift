@@ -36,10 +36,11 @@ struct SourcesView: View {
                                                 SourceAppsView(object: Array(_sources), viewModel: viewModel)
                                         } label: {
                                                 HStack(spacing: 9) {
-                                                        if let appIcon = UIImage(named: "AppIcon") {
+                                                        if let iconFileName = Bundle.main.iconFileName,
+                                                           let appIcon = UIImage(named: iconFileName) {
                                                                 Image(uiImage: appIcon).appIconStyle()
                                                         } else {
-                                                                Image("Repositories").appIconStyle()
+                                                                Image("App_Unknown").appIconStyle()
                                                         }
                                                         NBTitleWithSubtitleView(
                                                                 title: .localized("All Repositories"),
@@ -94,7 +95,7 @@ struct SourcesView: View {
                         }
                         .sheet(isPresented: $_isAddingPresenting) {
                                 SourcesAddView()
-                                        .presentationDetents([.medium])
+                                        .presentationDetents([.medium, .large])
                         }
                         .refreshable {
                                 await viewModel.fetchSources(_sources, refresh: true)

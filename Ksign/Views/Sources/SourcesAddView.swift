@@ -13,13 +13,14 @@ import NimbleJSON
 // MARK: - View
 struct SourcesAddView: View {
         @Environment(\.dismiss) var dismiss
-        
+
         typealias RepositoryDataHandler = Result<ASRepository, Error>
-        
+
         private let _dataService = NBFetchService()
-        
+
         @State private var _isImporting = false
         @State private var _sourceURL = ""
+        @StateObject private var _suggestedVM = SuggestedSourcesViewModel()
         
         // MARK: Body
         var body: some View {
@@ -55,29 +56,21 @@ struct SourcesAddView: View {
 
                                 // Suggested sources section
                                 NBSection(.localized("Suggested Sources")) {
-                                    ForEach(Storage.suggestedSourceURLs, id: \.url) { suggestion in
-                                        Button {
-                                            FR.handleSource(suggestion.url) {
-                                                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                                    ForEach(_suggestedVM.sources) { suggestion in
+                                        SuggestedSourceRow(
+                                            suggestion: suggestion,
+                                            onAdd: {
+                                                _suggestedVM.addSource(suggestion)
                                             }
-                                        } label: {
-                                            HStack {
-                                                Image(systemName: "plus.circle")
-                                                    .foregroundStyle(Color.accentColor)
-                                                Text(suggestion.name)
-                                                Spacer()
-                                                Image(systemName: "chevron.right")
-                                                    .font(.caption)
-                                                    .foregroundStyle(.secondary)
-                                            }
-                                        }
-                                        .buttonStyle(.plain)
+                                        )
                                     }
+                                } footer: {
+                                    Text(.localized("Tap the add button next to a source to add it to your repository list."))
                                 }
                         }
                         .toolbar {
                                 NBToolbarButton(role: .cancel)
-                                
+
                                 if !_isImporting {
                                         NBToolbarButton(
                                                 .localized("Save"),
@@ -94,6 +87,12 @@ struct SourcesAddView: View {
                                                 ProgressView()
                                         }
                                 }
+                        }
+                        .task {
+                                await _suggestedVM.fetchAllMetadata()
+                        }
+                        .onAppear {
+                                _suggestedVM.refreshAddedStates()
                         }
                 }
         }
